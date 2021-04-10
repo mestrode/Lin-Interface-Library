@@ -1,0 +1,21 @@
+{
+  "name": "Lin-Interface",
+  "version": "0.0.1",
+  "description": "send and request LIN-Frames via UART (Break, Sync, ID, Data, Checksum)",
+  "keywords": [
+    "LIN",
+    "Lin-Bus"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mestrode/Lin-Interface-Library"
+  },
+  "authors": [
+    {
+      "name": "mestrode",
+      "maintainer": true
+    }
+  ],
+  "license": "GPL-2.0-only",
+  "dependencies": []
+}
