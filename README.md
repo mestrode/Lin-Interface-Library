@@ -7,7 +7,9 @@ The HardwareSerial UART of an ESP32 is used. (But in the past I used a software 
 I've used a TJA1020 Transceiver on HW side in my project. The chip contains a statemachine, which needs to be controlled before you will be able to write or receive data. To keep thinks easy, I created a derived class (from this one) which consider the statemachine every time using the bus: https://github.com/mestrode/Lin-Transceiver-Library
 
 # example
-Take a look into this repo to see, how this works: https://github.com/mestrode/IBS-Sensor-Library
+Need a basic example: Take a look into the example folder.
+
+More complex example: Take a look into this repo to see, how this works: https://github.com/mestrode/IBS-Sensor-Library
 
 This code calls some methods of BatSensor which utilizes the Lin-Interface
 
@@ -56,7 +58,6 @@ The aktual data handling looks like this:
 
    bool IBS_Sensor::readFrameCapacity()
     {
-
         bool chkSumValid = LinBus->readFrame(IBS_FrameID[_SensorNo][IBS_FRM_CAP]);
         if (chkSumValid)
         {
