@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <Lin-Interface.hpp>
+#include <Lin_Interface.hpp>
 
 // using UART 1 for LinBus
 Lin_Interface LinBus(1);

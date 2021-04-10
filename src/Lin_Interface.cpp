@@ -6,7 +6,7 @@
 // Copyright mestrode <ardlib@mestro.de>
 // Original Source: "https://github.com/mestrode/Lin-Interface-Library"
 
-#include "Lin-Interface.hpp"
+#include "Lin_Interface.hpp"
 
 #include <Arduino.h>
 
