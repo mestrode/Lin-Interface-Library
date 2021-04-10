@@ -113,11 +113,10 @@ void Lin_Interface::writeFrame(uint8_t FrameID, size_t size)
 /// TODO: read back of the break needs to be verified
     verboseMode = 1;
 
-    // Read Break 
-    uint8_t RX_Break = 0x00;
+    // Read Break and discard
     if (HardwareSerial::available())
     {
-        RX_Break = HardwareSerial::read();
+        HardwareSerial::read();
     }
     // Read Sync
     uint8_t RX_Sync = 0x00;
