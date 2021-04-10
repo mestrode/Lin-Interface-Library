@@ -210,13 +210,14 @@ void Lin_Interface::writeFrameClassic(uint8_t FrameID, size_t size)
 size_t Lin_Interface::writeBreak()
 {
     HardwareSerial::flush();
-    // Halbe Geschwindigkeit, so das ein Brake erzeugt wird
+    // configure to half baudrate --> a t_bit will be doubled
     HardwareSerial::updateBaudRate(baud >> 1);
-    // 0x00 ausgeben, so das das Stopp-Bit (=1) zum Brake Signalwird
+    // write 0x00, including Stop-Bit (=1),
+    // qualifies when writing in slow motion like a Break in normal speed
     size_t ret = write(uint8_t(0x00));
-    // abwarten bis das übertragen wurde
+    // ensure this is send
     HardwareSerial::flush();
-    // Volle Geschwindigkeit wieder herstellen
+    // restore normal speed
     HardwareSerial::updateBaudRate(baud);
     return ret;
 }
@@ -256,7 +257,7 @@ uint8_t Lin_Interface::getChecksum(uint8_t ProtectedID, size_t size)
     // test FrameID bits for classicChecksum
     if ((sum & 0x3F) >= 0x3C)
     {
-        // LIN 1.x: legarcy
+        // LIN 1.x: legacy
         // LIN 2.0: don't include PID for ChkSum calculation on configuration and reserved frames
         sum = 0x00;
     }

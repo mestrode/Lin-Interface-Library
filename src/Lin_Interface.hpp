@@ -1,4 +1,4 @@
-// HardwareLin.h
+// Lin_Interface.h
 //
 // Provides a Hardware LIN Interface
 // inherited from the "HardwareSerial"
