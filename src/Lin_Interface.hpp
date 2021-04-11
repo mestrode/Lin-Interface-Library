@@ -28,12 +28,12 @@ public:
 
     bool readFrame(uint8_t FrameID);
 
-    void writeFrame(uint8_t FrameID, size_t size);
-    void writeFrameClassic(uint8_t FrameID, size_t size);
+    void writeFrame(uint8_t FrameID, uint8_t datalen);
+    void writeFrameClassic(uint8_t FrameID, uint8_t datalen);
 
 protected:
     uint32_t m_bitCycles;
     size_t writeBreak();
     uint8_t getProtectedID(uint8_t FrameID);
-    uint8_t getChecksum(uint8_t ProtectedID, size_t size);
+    uint8_t getChecksum(uint8_t ProtectedID, uint8_t datalen);
 };

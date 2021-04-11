@@ -32,7 +32,7 @@ bool Lin_Interface::readFrame(uint8_t FrameID)
     delay(100);
 
     // Break, Sync and ProtectedID will be received --> discard them
-    int bytes_received = -3;
+    int bytes_received = -4;
     while (HardwareSerial::available())
     {
         if (bytes_received >= (8 + 1)) // max 8x Data + 1x Checksum
@@ -40,14 +40,28 @@ bool Lin_Interface::readFrame(uint8_t FrameID)
             // receive max 9 Bytes: 8 Data + 1 Chksum
             break;
         }
-        if (bytes_received < 0)
+        switch (bytes_received)
+        {
+        case -4:    //??
+        case -3:    // break = 0x00
+        case -2:    // sync = 0x55
+        case -1:    // Protected ID
         {
             // discard Sync and PID (send by us)
-            HardwareSerial::read();
-            // TODO: Sync and PID may to be verified here
+            uint8_t buffer = HardwareSerial::read();
+            // Sync and PID may to be verified here
+            if (buffer == 0x00) { // break
+                bytes_received = -3;
+            }
+            if (buffer == 0x55) { // sync
+                bytes_received = -2;
+            }
+            if (buffer == ProtectedID) { // PID
+                bytes_received = -1;
+            }
+            break;
         }
-        else
-        {
+        default: // Data 0...7, Checksum
             // Receive and save only Data Byte (send by slave)
             LinMessage[bytes_received] = HardwareSerial::read();
         }
@@ -58,6 +72,14 @@ bool Lin_Interface::readFrame(uint8_t FrameID)
 
     // erase data in buffer, in case a 9th or 10th Byte was received
     HardwareSerial::flush();
+    while (HardwareSerial::available()) {
+        HardwareSerial::read();
+        if (verboseMode > 0)
+        {
+            Serial.print("additional byte discarded\n");
+        }
+    }
+
     HardwareSerial::end();
 
     // verify Checksum
@@ -88,20 +110,20 @@ bool Lin_Interface::readFrame(uint8_t FrameID)
 /// @brief write a complete LIN2.0 frame without request of data to the lin-bus
 /// @details write LIN Frame (Break, Synk, PID, Data, Checksum) to the Bus, and hope somebody will read this
 /// Checksum Calculations regarding LIN 2.0
-/// The data of this frame is 'size' long and incuded in the Lin_Interface::LinMessage[] array
+/// The data of this frame is 'dataLen' long and incuded in the Lin_Interface::LinMessage[] array
 /// @param FrameID ID of frame (will be converted to protected ID)
-/// @param size count of data within the LinMessage array (containing only the data) should be transmitted
-void Lin_Interface::writeFrame(uint8_t FrameID, size_t size)
+/// @param dataLen count of data within the LinMessage array (containing only the data) should be transmitted
+void Lin_Interface::writeFrame(uint8_t FrameID, uint8_t dataLen)
 {
     uint8_t ProtectedID = getProtectedID(FrameID);
-    uint8_t cksum = getChecksum(ProtectedID, size);
+    uint8_t cksum = getChecksum(ProtectedID, dataLen);
 
     // übertragung startet
     HardwareSerial::begin(baud, SERIAL_8N1);
     writeBreak();                       // initiate Frame with a Break
     HardwareSerial::write(0x55);        // Sync
     HardwareSerial::write(ProtectedID); // PID
-    for (int i = 0; i < size; ++i)
+    for (uint8_t i = 0; i < dataLen; ++i)
     {
         HardwareSerial::write(LinMessage[i]); // Message (array from 1..8)
     }
@@ -183,16 +205,16 @@ void Lin_Interface::writeFrame(uint8_t FrameID, size_t size)
 /// TODO: function needs to be verified
 /// send Frame (Break, Synk, PID, Data, Classic-Checksum) to the Bus
 /// Checksum Calculations regarding LIN 1.x
-void Lin_Interface::writeFrameClassic(uint8_t FrameID, size_t size)
+void Lin_Interface::writeFrameClassic(uint8_t FrameID, uint8_t dataLen)
 {
     uint8_t ProtectedID = getProtectedID(FrameID);
-    uint8_t cksum = getChecksum(0x00, size);
+    uint8_t cksum = getChecksum(0x00, dataLen);
 
     HardwareSerial::begin(baud, SERIAL_8N1);
     writeBreak();                       // initiate Frame with a Break
     HardwareSerial::write(0x55);        // Sync
     HardwareSerial::write(ProtectedID); // ID
-    for (int i = 0; i < size; ++i)
+    for (int i = 0; i < dataLen; ++i)
     {
         HardwareSerial::write(LinMessage[i]); // Message (array from 1..8)
     }
@@ -249,9 +271,9 @@ uint8_t Lin_Interface::getProtectedID(uint8_t FrameID)
 ///     https://microchipdeveloper.com/local--files/lin:specification/LIN-Spec_2.2_Rev_A.PDF
 ///     2.8.3 Example of Checksum Calculation
 /// @param ProtectedID initial Byte, set to 0x00, when calc Checksum for classic LIN Frame
-/// @param size length of Frame (only Data Bytes)
+/// @param dataLen length of Frame (only Data Bytes)
 /// @returns calculated checksum
-uint8_t Lin_Interface::getChecksum(uint8_t ProtectedID, size_t size)
+uint8_t Lin_Interface::getChecksum(uint8_t ProtectedID, uint8_t dataLen)
 {
     uint16_t sum = ProtectedID;
     // test FrameID bits for classicChecksum
@@ -263,8 +285,8 @@ uint8_t Lin_Interface::getChecksum(uint8_t ProtectedID, size_t size)
     }
     // sum up all bytes (including carryover to the high byte)
     // ID allready considered
-    while (size-- > 0)
-        sum += LinMessage[size];
+    while (dataLen-- > 0)
+        sum += LinMessage[dataLen];
     // add high byte (carry over) to the low byte
     while (sum >> 8)
         sum = (sum & 0xFF) + (sum >> 8);
