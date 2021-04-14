@@ -123,7 +123,7 @@ void Lin_Interface::writeFrame(uint8_t FrameID, uint8_t dataLen)
     writeBreak();                       // initiate Frame with a Break
     HardwareSerial::write(0x55);        // Sync
     HardwareSerial::write(ProtectedID); // PID
-    for (uint8_t i = 0; i < dataLen; ++i)
+    for (int i = 0; i < dataLen; ++i)
     {
         HardwareSerial::write(LinMessage[i]); // Message (array from 1..8)
     }
