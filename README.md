@@ -1,5 +1,5 @@
 # LIN-Interface-Library
-Send and Sends and Request data by compiling a LIN Frames and transmission via Serial (as a Bus Master)
+Send and request data by compiling a LIN Frame and transmitting via Serial-Interface (as a Bus Master)
 
 The HardwareSerial UART of an ESP32 is used. (But in the past I used a software serial and therefore I derived this class in a prior version from the class SoftwareSerial)
 
