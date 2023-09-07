@@ -23,10 +23,11 @@ bool Lin_Interface::readFrame(uint8_t FrameID)
     bool ChecksumValid = false;
 
     // start transmission
-    HardwareSerial::begin(baud, SERIAL_8N1);
-    writeBreak();                       // initiate Frame with a Break
-    HardwareSerial::write(0x55);        // Sync
-    HardwareSerial::write(ProtectedID); // PID
+    startTransmission(ProtectedID);
+    //HardwareSerial::begin(baud, SERIAL_8N1);
+    //writeBreak();                       // initiate Frame with a Break
+    //HardwareSerial::write(0x55);        // Sync
+    //HardwareSerial::write(ProtectedID); // PID
     HardwareSerial::flush();
     // wait for available data
     delay(100);
@@ -119,10 +120,11 @@ void Lin_Interface::writeFrame(uint8_t FrameID, uint8_t dataLen)
     uint8_t cksum = getChecksum(ProtectedID, dataLen);
 
     // übertragung startet
-    HardwareSerial::begin(baud, SERIAL_8N1);
-    writeBreak();                       // initiate Frame with a Break
-    HardwareSerial::write(0x55);        // Sync
-    HardwareSerial::write(ProtectedID); // PID
+    startTransmission(ProtectedID);
+    //HardwareSerial::begin(baud, SERIAL_8N1);
+    //writeBreak();                       // initiate Frame with a Break
+    //HardwareSerial::write(0x55);        // Sync
+    //HardwareSerial::write(ProtectedID); // PID
     for (int i = 0; i < dataLen; ++i)
     {
         HardwareSerial::write(LinMessage[i]); // Message (array from 1..8)
@@ -210,10 +212,12 @@ void Lin_Interface::writeFrameClassic(uint8_t FrameID, uint8_t dataLen)
     uint8_t ProtectedID = getProtectedID(FrameID);
     uint8_t cksum = getChecksum(0x00, dataLen);
 
-    HardwareSerial::begin(baud, SERIAL_8N1);
-    writeBreak();                       // initiate Frame with a Break
-    HardwareSerial::write(0x55);        // Sync
-    HardwareSerial::write(ProtectedID); // ID
+
+    startTransmission(ProtectedID);
+    //HardwareSerial::begin(baud, SERIAL_8N1);
+    //writeBreak();                       // initiate Frame with a Break
+    //HardwareSerial::write(0x55);        // Sync
+    //HardwareSerial::write(ProtectedID); // ID
     for (int i = 0; i < dataLen; ++i)
     {
         HardwareSerial::write(LinMessage[i]); // Message (array from 1..8)
@@ -293,3 +297,20 @@ uint8_t Lin_Interface::getChecksum(uint8_t ProtectedID, uint8_t dataLen)
     // inverting result
     return (~sum);
 }
+
+void Lin_Interface::startTransmission(uint8_t ProtectedID)
+{
+    
+    // start transmission
+    if (rxPin < 0 && txPin < 0) {  //if custom pins not defined
+                    HardwareSerial::begin(baud, SERIAL_8N1);
+                }
+    else {
+        HardwareSerial::begin(baud, SERIAL_8N1, rxPin, txPin);
+    }
+    
+    writeBreak();                       // initiate Frame with a Break
+    HardwareSerial::write(0x55);        // Sync
+    HardwareSerial::write(ProtectedID); // PID
+
+} 
