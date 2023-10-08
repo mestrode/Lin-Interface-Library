@@ -22,12 +22,9 @@ bool Lin_Interface::readFrame(uint8_t FrameID)
     uint8_t ProtectedID = getProtectedID(FrameID);
     bool ChecksumValid = false;
 
-    // start transmission
-    HardwareSerial::begin(baud, SERIAL_8N1);
-    writeBreak();                       // initiate Frame with a Break
-    HardwareSerial::write(0x55);        // Sync
-    HardwareSerial::write(ProtectedID); // PID
+    startTransmission(ProtectedID);
     HardwareSerial::flush();
+
     // wait for available data
     delay(100);
 
@@ -118,11 +115,8 @@ void Lin_Interface::writeFrame(uint8_t FrameID, uint8_t dataLen)
     uint8_t ProtectedID = getProtectedID(FrameID);
     uint8_t cksum = getChecksum(ProtectedID, dataLen);
 
-    // übertragung startet
-    HardwareSerial::begin(baud, SERIAL_8N1);
-    writeBreak();                       // initiate Frame with a Break
-    HardwareSerial::write(0x55);        // Sync
-    HardwareSerial::write(ProtectedID); // PID
+    startTransmission(ProtectedID);
+
     for (int i = 0; i < dataLen; ++i)
     {
         HardwareSerial::write(LinMessage[i]); // Message (array from 1..8)
@@ -210,10 +204,8 @@ void Lin_Interface::writeFrameClassic(uint8_t FrameID, uint8_t dataLen)
     uint8_t ProtectedID = getProtectedID(FrameID);
     uint8_t cksum = getChecksum(0x00, dataLen);
 
-    HardwareSerial::begin(baud, SERIAL_8N1);
-    writeBreak();                       // initiate Frame with a Break
-    HardwareSerial::write(0x55);        // Sync
-    HardwareSerial::write(ProtectedID); // ID
+    startTransmission(ProtectedID);
+
     for (int i = 0; i < dataLen; ++i)
     {
         HardwareSerial::write(LinMessage[i]); // Message (array from 1..8)
@@ -225,6 +217,22 @@ void Lin_Interface::writeFrameClassic(uint8_t FrameID, uint8_t dataLen)
 
     HardwareSerial::end();
 } // void Lin_Interface::writeFrameClassic
+
+/// Introduce Frame (Start UART, Break, Sync, PID)
+void Lin_Interface::startTransmission(uint8_t ProtectedID)
+{
+    // start UART
+    if (rxPin < 0 && txPin < 0) {
+        //no custom pins are defined
+        HardwareSerial::begin(baud, SERIAL_8N1);
+    } else {
+        HardwareSerial::begin(baud, SERIAL_8N1, rxPin, txPin);
+    }
+
+    writeBreak();                       // initiate Frame with a Break
+    HardwareSerial::write(0x55);        // Sync
+    HardwareSerial::write(ProtectedID); // PID
+} 
 
 /// Send a Break for introduction of a Frame
 /// This is done by sending a Byte (0x00) + Stop Bit by using half baud rate
