@@ -26,7 +26,7 @@ bool Lin_Interface::readFrame(uint8_t FrameID)
     HardwareSerial::flush();
 
     // wait for available data
-    delay(100);
+    delay(400);
 
     // Break, Sync and ProtectedID will be received --> discard them
     int bytes_received = -4;
@@ -124,10 +124,10 @@ void Lin_Interface::writeFrame(uint8_t FrameID, uint8_t dataLen)
     HardwareSerial::write(cksum);
 
     // wait for available data
-    delay(10);
+    delay(20);
 
 /// TODO: read back of the break needs to be verified
-    verboseMode = 1;
+    //verboseMode = 1;
 
     // Read Break and discard
     if (HardwareSerial::available())
