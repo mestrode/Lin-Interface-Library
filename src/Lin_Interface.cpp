@@ -26,11 +26,15 @@ bool Lin_Interface::readFrame(uint8_t FrameID, uint8_t expectedlen)
     HardwareSerial::flush();
 
     // wait for available data
+    if (expectedlen>0) {
     unsigned long wtime=millis();
-    while (millis()-wtime<400) {
-      if (HardwareSerial::available()>=expectedlen+4) {  //4 -> break, sync, pid, checksum
-        break;
-      }
+        while (millis()-wtime<400) {
+          if (HardwareSerial::available()>=expectedlen+4) {  //4 -> break, sync, pid, checksum
+            break;
+          }
+        }
+    } else {
+        delay(100);
     }
 
     // Break, Sync and ProtectedID will be received --> discard them
