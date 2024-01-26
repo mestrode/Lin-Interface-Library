@@ -250,7 +250,7 @@ size_t Lin_Interface::writeBreak()
     HardwareSerial::updateBaudRate(baud >> 1);
     // write 0x00, including Stop-Bit (=1),
     // qualifies when writing in slow motion like a Break in normal speed
-    size_t ret = write(uint8_t(0x00));
+    size_t ret = HardwareSerial::write(uint8_t(0x00));
     // ensure this is send
     HardwareSerial::flush();
     // restore normal speed
