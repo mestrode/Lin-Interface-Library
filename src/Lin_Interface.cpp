@@ -80,7 +80,7 @@ bool Lin_Interface::readFrame(uint8_t FrameID)
     HardwareSerial::end();
 
     // verify Checksum
-    ChecksumValid = (0xFF == (uint8_t)(Checksum + ~getChecksum(ProtectedID, bytes_received)));
+    ChecksumValid = (bytes_received > 0) && (0xFF == (uint8_t)(Checksum + ~getChecksum(ProtectedID, bytes_received)));
 
     if (verboseMode > 0)
     {
@@ -91,11 +91,17 @@ bool Lin_Interface::readFrame(uint8_t FrameID)
                 break;
             Serial.printf("%02X.", LinMessage[i]);
         }
-        Serial.printf("\b|%02X", Checksum);
 
-        if (!ChecksumValid)
-        {
-            Serial.printf(" Checksum failed ");
+        if (bytes_received>0) {
+            Serial.printf("\b|%02X", Checksum);
+            Serial.printf(" bytes received %d",bytes_received);
+
+            if (!ChecksumValid)
+            {
+                Serial.printf(" Checksum failed ");
+            }
+        } else {
+            Serial.printf(" no bytes received");
         }
 
         Serial.println();
