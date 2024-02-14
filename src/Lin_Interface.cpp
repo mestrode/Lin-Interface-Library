@@ -6,9 +6,80 @@
 // Copyright mestrode <ardlib@mestro.de>
 // Original Source: "https://github.com/mestrode/Lin-Interface-Library"
 
+// Lin 2.2A specification
+// https://www.lin-cia.org/fileadmin/microsites/lin-cia.org/resources/documents/LIN_2.2A.pdf
+
 #include "Lin_Interface.hpp"
 
 #include <Arduino.h>
+
+// Lin Config and ID Specification 2.1 Chapter 4.2.3.2 NAD
+// 0            = go sleep command
+// 1-125 (0x7D) = Slave Node Adress (NAD)
+// 126   (0x7E) = functional node adress (functional NAD), only used for diagnostic
+// 127   (0x7F) = Slave node adress broadcast (broadcast NAD)
+// 128   (0x80) 
+// 255   (0xFF) = Free usage
+
+// Lin Transport Layer Specification 2.1 Chapter 3.2.1.3 PCI
+// high nibble = PCI type, low nibble = length
+//  Single Frame      0b0000 length
+//  First Frame       0b0001 length / 256 = high byte of length; low byte of length will be transmitted in len
+//  Consecutive Frame 0b0010 FrameCounter % 16, starting with one
+
+// Lin Transport Layer Specification 2.1 Chapter 3.2.1.5 SID
+// Service Indentifier
+// 0x00-0xAF   and
+// 0xB8-0xFE = diagnostics
+// ---- - node configuration
+//      0xB0 = Assign NAD
+//      0xB1 = Assign Frame Identifier (obsolete, see Lin 2.0)
+//      0xB2 = Read by Identifier
+//      0xB3 = Conditional Change NAD
+//      0xB4 = Data Dump
+//      0xB5 = Assign NAD via SNPD (reserved for Node Position detection)
+//      0xB6 = Save Configuration (optional)
+//      0xB7 = Assign frame identifier range
+// 0xB8-0xFF = reserved
+
+// send wakeup command by sending a bus dominant for 1.6ms (at 9600 Baud)
+void Lin_Interface::writeCmdWakeup()
+{
+    // Lin Protocol Specification 2.1 Chapter 2.6.2 Wakeup
+    // hold down for 250µs - 5ms
+    // 9600 Baud = 104µs per bit ==> half speed = 208µs per bit ==> 8 bits = 1.664ms
+    HardwareSerial::flush();
+    // configure to half baudrate --> a t_bit will be doubled
+    HardwareSerial::updateBaudRate(baud >> 1);
+    // write 0x00, including Stop-Bit (=1),
+    // qualifies when writing in slow motion for a wake-up-request
+    write(uint8_t(0x00));
+    // ensure this is send
+    HardwareSerial::flush();
+    // restore normal speed
+    HardwareSerial::updateBaudRate(baud);
+
+    // give the bus some time to wake up (100-150ms)
+    delay(150);
+}
+
+/// @brief Request bus cluster to go to sleep
+void Lin_Interface::writeCmdSleep()
+{
+    // Lin Protocol Specification 2.1 Chapter 2.6.3 Go To Sleep
+    // Request from master to all nodes to go to sleep
+    // only NodeID=0 shall be considered by nodes
+    LinMessage[0] = 0;    // NodeId
+    LinMessage[1] = 0xFF; // PCI
+    LinMessage[2] = 0xFF; // SID
+    LinMessage[3] = 0xFF; // D1
+    LinMessage[4] = 0xFF; // D2
+    LinMessage[5] = 0xFF; // D3
+    LinMessage[6] = 0xFF; // D4
+    LinMessage[7] = 0xFF; // D5
+
+    writeFrame(0x3C, 8);
+}
 
 /// @brief reads data from a lin device by requesting a specific FrameID
 /// @details Start frame and read answer from bus device

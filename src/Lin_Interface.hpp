@@ -27,6 +27,8 @@ public:
 
     // 8 Data Bytes + ChkSum + some space for receiving complete frames
     uint8_t LinMessage[8 + 1 + 4] = {0};
+    void writeCmdWakeup();
+    void writeCmdSleep();
 
     bool readFrame(uint8_t FrameID, uint8_t expectedlen = 0);
 
