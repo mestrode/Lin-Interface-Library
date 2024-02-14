@@ -1,6 +1,6 @@
 {
   "name": "Lin-Interface",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "send and request LIN-Frames via UART (Break, Sync, ID, Data, Checksum)",
   "keywords": [
     "LIN",
