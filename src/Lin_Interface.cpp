@@ -26,10 +26,12 @@ bool Lin_Interface::readFrame(uint8_t FrameID, uint8_t expectedlen)
     HardwareSerial::flush();
 
     // wait for available data
-    if (expectedlen>0) {
-    unsigned long wtime=millis();
-        while (millis()-wtime<400) {
-          if (HardwareSerial::available()>=expectedlen+4) {  //4 -> break, sync, pid, checksum
+    if (expectedlen > 0)
+    {
+        unsigned long wtime = millis();
+        while ((millis() - wtime) < 400)
+        {
+          if (HardwareSerial::available() >= (expectedlen + 4)) {  //4 -> break, sync, pid, checksum
             break;
           }
         }
@@ -96,18 +98,20 @@ bool Lin_Interface::readFrame(uint8_t FrameID, uint8_t expectedlen)
         Serial.printf(" --->>>>>> FID %02Xh        = 55|%02X|", FrameID, ProtectedID);
         for (int i = 0; i < 8; ++i)
         {
-            if (i >= bytes_received)
+            if (i >= bytes_received) {
                 break;
+            }
             Serial.printf("%02X.", LinMessage[i]);
         }
 
-        if (bytes_received>0) {
+        if (bytes_received > 0)
+        {
             Serial.printf("\b|%02X", Checksum);
             Serial.printf(" bytes received %d",bytes_received);
 
             if (!ChecksumValid)
             {
-                Serial.printf(" Checksum failed ");
+                Serial.printf(" Checksum failed");
             }
         } else {
             Serial.printf(" no bytes received");
