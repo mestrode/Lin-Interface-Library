@@ -308,6 +308,20 @@ void Lin_Interface::writeFrameClassic(uint8_t FrameID, uint8_t dataLen)
     HardwareSerial::end();
 } // void Lin_Interface::writeFrameClassic
 
+void Lin_Interface::writeFrameClassicNoChecksum(uint8_t FrameID, uint8_t dataLen)
+{
+    uint8_t ProtectedID = getProtectedID(FrameID);
+
+    startTransmission(ProtectedID);
+
+    for (int i = 0; i < dataLen; ++i)
+    {
+        HardwareSerial::write(LinMessage[i]); // Message (array from 1..8)
+    }
+    HardwareSerial::flush();
+    HardwareSerial::end();
+}
+
 /// Introduce Frame (Start UART, Break, Sync, PID)
 void Lin_Interface::startTransmission(uint8_t ProtectedID)
 {

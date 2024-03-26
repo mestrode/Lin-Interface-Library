@@ -34,6 +34,7 @@ public:
 
     void writeFrame(uint8_t FrameID, uint8_t datalen);
     void writeFrameClassic(uint8_t FrameID, uint8_t datalen);
+    void writeFrameClassicNoChecksum(uint8_t FrameID, uint8_t datalen);
 
 protected:
     uint32_t m_bitCycles;
