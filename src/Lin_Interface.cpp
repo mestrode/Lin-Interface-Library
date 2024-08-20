@@ -42,6 +42,9 @@
 //      0xB7 = Assign frame identifier range
 // 0xB8-0xFF = reserved
 
+constexpr auto BREAK_BYTE = 0x00;
+constexpr auto SYNC_BYTE = 0x55;
+
 // send wakeup command by sending a bus dominant for 1.6ms (at 9600 Baud)
 void Lin_Interface::writeCmdWakeup()
 {
@@ -53,7 +56,7 @@ void Lin_Interface::writeCmdWakeup()
     HardwareSerial::updateBaudRate(baud >> 1);
     // write 0x00, including Stop-Bit (=1),
     // qualifies when writing in slow motion for a wake-up-request
-    write(uint8_t(0x00));
+    write(uint8_t(BREAK_BYTE));
     // ensure this is send
     HardwareSerial::flush();
     // restore normal speed
@@ -110,8 +113,13 @@ bool Lin_Interface::readFrame(uint8_t FrameID, uint8_t expectedlen)
         delay(100);
     }
 
+    constexpr auto START_IDX = -4;
+    constexpr auto BREAK_IDX = -3;
+    constexpr auto SYNC_IDX = -2;
+    constexpr auto PROTECTED_ID_IDX = -1;
+
     // Break, Sync and ProtectedID will be received --> discard them
-    int bytes_received = -4;
+    int8_t bytes_received = START_IDX;
     while (HardwareSerial::available())
     {
         if (bytes_received >= (8 + 1)) // max 8x Data + 1x Checksum
@@ -119,24 +127,25 @@ bool Lin_Interface::readFrame(uint8_t FrameID, uint8_t expectedlen)
             // receive max 9 Bytes: 8 Data + 1 Chksum
             break;
         }
+
         switch (bytes_received)
         {
-        case -4:    //??
-        case -3:    // break = 0x00
-        case -2:    // sync = 0x55
-        case -1:    // Protected ID
+        case START_IDX:         // ??
+        case BREAK_IDX:         // break = 0x00
+        case SYNC_IDX:          // sync = SYNC_BYTE
+        case PROTECTED_ID_IDX:  // Protected ID
         {
             // discard Sync and PID (send by us)
             uint8_t buffer = HardwareSerial::read();
             // Sync and PID may to be verified here
-            if (buffer == 0x00) { // break
-                bytes_received = -3;
+            if (buffer == BREAK_BYTE) {
+                bytes_received = BREAK_IDX;
             }
-            if (buffer == 0x55) { // sync
-                bytes_received = -2;
+            if (buffer == SYNC_BYTE) {
+                bytes_received = SYNC_IDX;
             }
-            if (buffer == ProtectedID) { // PID
-                bytes_received = -1;
+            if (buffer == ProtectedID) {
+                bytes_received = PROTECTED_ID_IDX;
             }
             break;
         }
@@ -334,7 +343,7 @@ void Lin_Interface::startTransmission(uint8_t ProtectedID)
     }
 
     writeBreak();                       // initiate Frame with a Break
-    HardwareSerial::write(0x55);        // Sync
+    HardwareSerial::write(SYNC_BYTE);   // Sync
     HardwareSerial::write(ProtectedID); // PID
 } 
 
