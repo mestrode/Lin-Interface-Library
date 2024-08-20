@@ -90,6 +90,7 @@ void Lin_Interface::writeCmdSleep()
 /// Receives as much as possible, but maximum 8 data byte + checksum
 /// Verify Checksum according to LIN 2.0 rules
 /// @param FrameID ID of frame (will be converted to protected ID)
+/// @param expectedlen Length of expected data (?) bytes
 /// @returns verification of checksum was succesful
 bool Lin_Interface::readFrame(uint8_t FrameID, uint8_t expectedlen)
 {
