@@ -42,4 +42,5 @@ protected:
     size_t writeBreak();
     uint8_t getProtectedID(uint8_t FrameID);
     uint8_t getChecksum(uint8_t ProtectedID, uint8_t datalen);
+    bool isChecksumValid(uint8_t Checksum, uint8_t ProtectedID, size_t bytes_received);
 };

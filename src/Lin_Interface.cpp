@@ -162,7 +162,7 @@ bool Lin_Interface::readFrame(uint8_t FrameID, uint8_t expectedlen)
     HardwareSerial::end();
 
     // verify Checksum
-    ChecksumValid = (bytes_received > 0) && (0xFF == (uint8_t)(Checksum + ~getChecksum(ProtectedID, bytes_received)));
+    ChecksumValid = (bytes_received > 0) && isChecksumValid(Checksum, ProtectedID, bytes_received);
 
     if (verboseMode > 0)
     {
@@ -387,21 +387,40 @@ uint8_t Lin_Interface::getProtectedID(uint8_t FrameID)
 /// @returns calculated checksum
 uint8_t Lin_Interface::getChecksum(uint8_t ProtectedID, uint8_t dataLen)
 {
-    uint16_t sum = ProtectedID;
-    // test FrameID bits for classicChecksum
-    if ((sum & 0x3F) >= 0x3C)
+    uint16_t sum = 0x00;
+
+    // consider configuration and reserved frames
+    if ((ProtectedID & 0x3F) < 0x3C)
     {
-        // LIN 1.x: legacy
-        // LIN 2.0: don't include PID for ChkSum calculation on configuration and reserved frames
-        sum = 0x00;
+        // for LIN 2.0 configuration and reserved frames:
+        //   include Protected ID in Checksum calculation
+        // (=legacy: LIN 1.3 Procedted ID is included in all types of Frames)
+        sum = ProtectedID;
     }
+
     // sum up all bytes (including carryover to the high byte)
-    // ID allready considered
-    while (dataLen-- > 0)
-        sum += LinMessage[dataLen];
+    for (uint8_t i = 0; i < dataLen; i++)
+    {
+        sum += LinMessage[i];
+    }
+
     // add high byte (carry over) to the low byte
-    while (sum >> 8)
-        sum = (sum & 0xFF) + (sum >> 8);
-    // inverting result
-    return (~sum);
+    sum = (sum & 0xFF) + (sum >> 8);
+    sum += (sum >> 8);
+
+    // invert result
+    return static_cast<uint8_t>(~sum);
+}
+
+bool Lin_Interface::isChecksumValid(uint8_t Checksum, uint8_t ProtectedID, size_t bytes_received)
+{
+    constexpr uint8_t CHECKSUM_MASK = 0xFF;
+    bool valid = CHECKSUM_MASK == static_cast<uint8_t>(Checksum + static_cast<uint8_t>(~getChecksum(ProtectedID, bytes_received)));
+
+    if (!valid && verboseMode > 0)
+    {
+        Serial.println("Checksum verification failed.");
+    }
+
+    return valid;
 }
