@@ -220,7 +220,7 @@ bool Lin_Interface::readFrame(const uint8_t FrameID, const uint8_t expectedDataL
 /// The data of this frame is 'dataLen' long and incuded in the Lin_Interface::LinMessage[] array
 /// @param FrameID ID of frame (will be converted to protected ID)
 /// @param dataLen count of data within the LinMessage array (containing only the data) should be transmitted
-void Lin_Interface::writeFrame(uint8_t FrameID, uint8_t dataLen)
+void Lin_Interface::writeFrame(const uint8_t FrameID, const uint8_t dataLen)
 {
     uint8_t ProtectedID = getProtectedID(FrameID);
     uint8_t cksum = getChecksum(ProtectedID, dataLen);
@@ -309,7 +309,7 @@ void Lin_Interface::writeFrame(uint8_t FrameID, uint8_t dataLen)
 /// TODO: function needs to be verified
 /// send Frame (Break, Synk, PID, Data, Classic-Checksum) to the Bus
 /// Checksum Calculations regarding LIN 1.x
-void Lin_Interface::writeFrameClassic(uint8_t FrameID, uint8_t dataLen)
+void Lin_Interface::writeFrameClassic(const uint8_t FrameID, const uint8_t dataLen)
 {
     uint8_t ProtectedID = getProtectedID(FrameID);
     uint8_t cksum = getChecksum(0x00, dataLen);
@@ -328,7 +328,7 @@ void Lin_Interface::writeFrameClassic(uint8_t FrameID, uint8_t dataLen)
     HardwareSerial::end();
 } // void Lin_Interface::writeFrameClassic
 
-void Lin_Interface::writeFrameClassicNoChecksum(uint8_t FrameID, uint8_t dataLen)
+void Lin_Interface::writeFrameClassicNoChecksum(const uint8_t FrameID, const uint8_t dataLen)
 {
     uint8_t ProtectedID = getProtectedID(FrameID);
 
@@ -343,7 +343,7 @@ void Lin_Interface::writeFrameClassicNoChecksum(uint8_t FrameID, uint8_t dataLen
 }
 
 /// Introduce Frame (Start UART, Break, Sync, PID)
-void Lin_Interface::startTransmission(uint8_t ProtectedID)
+void Lin_Interface::startTransmission(const uint8_t ProtectedID)
 {
     // start UART
     if (rxPin < 0 && txPin < 0)
@@ -382,7 +382,7 @@ size_t Lin_Interface::writeBreak()
 /// get Protected ID by calculating parity bits and combine with Frame ID
 /// @param FrameID to be converted
 /// @return Protected ID
-uint8_t Lin_Interface::getProtectedID(uint8_t FrameID)
+uint8_t Lin_Interface::getProtectedID(const uint8_t FrameID)
 {
     // calc Parity Bit 0
     uint8_t p0 = bitRead(FrameID, 0) ^ bitRead(FrameID, 1) ^ bitRead(FrameID, 2) ^ bitRead(FrameID, 4);
@@ -408,7 +408,7 @@ uint8_t Lin_Interface::getProtectedID(uint8_t FrameID)
 /// @param ProtectedID initial Byte, set to 0x00, when calc Checksum for classic LIN Frame
 /// @param dataLen length of Frame (only Data Bytes)
 /// @returns calculated checksum
-uint8_t Lin_Interface::getChecksum(uint8_t ProtectedID, uint8_t dataLen)
+uint8_t Lin_Interface::getChecksum(const uint8_t ProtectedID, const uint8_t dataLen)
 {
     uint16_t sum = 0x00;
 
@@ -435,7 +435,7 @@ uint8_t Lin_Interface::getChecksum(uint8_t ProtectedID, uint8_t dataLen)
     return static_cast<uint8_t>(~sum);
 }
 
-bool Lin_Interface::isChecksumValid(uint8_t Checksum, uint8_t ProtectedID, size_t bytes_received)
+bool Lin_Interface::isChecksumValid(const uint8_t Checksum, const uint8_t ProtectedID, const size_t bytes_received)
 {
     constexpr uint8_t CHECKSUM_MASK = 0xFF;
     bool valid = CHECKSUM_MASK == static_cast<uint8_t>(Checksum + static_cast<uint8_t>(~getChecksum(ProtectedID, bytes_received)));

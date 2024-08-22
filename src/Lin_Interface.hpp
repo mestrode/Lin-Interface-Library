@@ -32,15 +32,15 @@ public:
 
     bool readFrame(const uint8_t FrameID, const uint8_t expectedDatalen = 0);
 
-    void writeFrame(uint8_t FrameID, uint8_t datalen);
-    void writeFrameClassic(uint8_t FrameID, uint8_t datalen);
-    void writeFrameClassicNoChecksum(uint8_t FrameID, uint8_t datalen);
+    void writeFrame(const uint8_t FrameID, const uint8_t datalen);
+    void writeFrameClassic(const uint8_t FrameID, const uint8_t datalen);
+    void writeFrameClassicNoChecksum(const uint8_t FrameID, const uint8_t datalen);
 
 protected:
     uint32_t m_bitCycles;
-    void startTransmission(uint8_t ProtectedID);
+    void startTransmission(const uint8_t ProtectedID);
     size_t writeBreak();
-    uint8_t getProtectedID(uint8_t FrameID);
-    uint8_t getChecksum(uint8_t ProtectedID, uint8_t datalen);
-    bool isChecksumValid(uint8_t Checksum, uint8_t ProtectedID, size_t bytes_received);
+    uint8_t getProtectedID(const uint8_t FrameID);
+    uint8_t getChecksum(const uint8_t ProtectedID, const uint8_t datalen);
+    bool isChecksumValid(const uint8_t Checksum, const uint8_t ProtectedID, const size_t bytes_received);
 };
