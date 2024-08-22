@@ -90,9 +90,9 @@ void Lin_Interface::writeCmdSleep()
 /// Receives as much as possible, but maximum 8 data byte + checksum
 /// Verify Checksum according to LIN 2.0 rules
 /// @param FrameID ID of frame (will be converted to protected ID)
-/// @param expectedlen Length of expected data (?) bytes
+/// @param expectedDataLen Length of expected data (?) bytes
 /// @returns verification of checksum was succesful
-bool Lin_Interface::readFrame(uint8_t FrameID, uint8_t expectedlen)
+bool Lin_Interface::readFrame(const uint8_t FrameID, const uint8_t expectedDataLen)
 {
     uint8_t ProtectedID = getProtectedID(FrameID);
     bool ChecksumValid = false;
@@ -101,16 +101,19 @@ bool Lin_Interface::readFrame(uint8_t FrameID, uint8_t expectedlen)
     HardwareSerial::flush();
 
     // wait for available data
-    if (expectedlen > 0)
+    if (expectedDataLen > 0)
     {
         unsigned long wtime = millis();
         while ((millis() - wtime) < 400)
         {
-          if (HardwareSerial::available() >= (expectedlen + 4)) {  //4 -> break, sync, pid, checksum
-            break;
-          }
+            if (HardwareSerial::available() >= (expectedDataLen + 4)) // 4 -> break, sync, pid, checksum
+            {
+                break;
+            }
         }
-    } else {
+    }
+    else
+    {
         delay(100);
     }
 

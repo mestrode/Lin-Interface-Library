@@ -30,7 +30,7 @@ public:
     void writeCmdWakeup();
     void writeCmdSleep();
 
-    bool readFrame(uint8_t FrameID, uint8_t expectedlen = 0);
+    bool readFrame(const uint8_t FrameID, const uint8_t expectedDatalen = 0);
 
     void writeFrame(uint8_t FrameID, uint8_t datalen);
     void writeFrameClassic(uint8_t FrameID, uint8_t datalen);
