@@ -30,6 +30,8 @@ public:
     void writeCmdWakeup();
     void writeCmdSleep();
 
+    bool writeDiagnosticMasterRequest();
+
     bool readFrame(const uint8_t FrameID, const uint8_t expectedDatalen = 0);
 
     void writeFrame(const uint8_t FrameID, const uint8_t datalen);

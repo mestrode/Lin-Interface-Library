@@ -13,6 +13,9 @@
 
 #include <Arduino.h>
 
+constexpr auto BREAK_BYTE = 0x00;
+constexpr auto SYNC_BYTE = 0x55;
+
 // Lin Config and ID Specification 2.1 Chapter 4.2.3.2 NAD
 // 0            = go sleep command
 // 1-125 (0x7D) = Slave Node Adress (NAD)
@@ -27,23 +30,44 @@
 //  First Frame       0b0001 length / 256 = high byte of length; low byte of length will be transmitted in len
 //  Consecutive Frame 0b0010 FrameCounter % 16, starting with one
 
+// LIN Specification said abaout FrameIDs:
+//    0-50 (0x00-0x3B) are used for normal Signal/data carrying frames.
+//    60 (0x3C) and 61 (0x3D) are used to carry diagnostic and configuration data.
+//    62 (0x3E) and 63 (0x3F) are reserved for future protocol enhancements.
+constexpr auto FRAME_ID_MASTER_REQUEST = 0x3C;
+constexpr auto FRAME_ID_SLAVE_REQUEST = 0x3D;
+
 // Lin Transport Layer Specification 2.1 Chapter 3.2.1.5 SID
 // Service Indentifier
 // 0x00-0xAF   and
 // 0xB8-0xFE = diagnostics
 // ---- - node configuration
-//      0xB0 = Assign NAD
-//      0xB1 = Assign Frame Identifier (obsolete, see Lin 2.0)
-//      0xB2 = Read by Identifier
-//      0xB3 = Conditional Change NAD
-//      0xB4 = Data Dump
-//      0xB5 = Assign NAD via SNPD (reserved for Node Position detection)
-//      0xB6 = Save Configuration (optional)
-//      0xB7 = Assign frame identifier range
-// 0xB8-0xFF = reserved
+constexpr auto SID_ASSIGN_NAD = 0xB0; // Assign NAD (Optional)
+constexpr auto SID_ASSIGN_FRAME_ID = 0xB1; // Assign Frame Identifier (obsolete, see Lin 2.0)
+constexpr auto SID_READ_BY_ID = 0xB2; // Read by Identifier (Mandatory)
+constexpr auto SID_CONDITIONAL_CHANGE = 0xB3; // Conditional Change NAD (Optional)
+constexpr auto SID_DATA_DUMP = 0xB4; // Data Dump (Optional)
+constexpr auto SID_RESERVED = 0xB5; // Assign NAD via SNPD (reserved for Node Position detection)
+constexpr auto SID_SAVE_CONFIG = 0xB6; // Save Configuration (Optional)
+constexpr auto SID_ASSIGN_FRAME_IDENTIFIER_RANGE = 0xB7; // Assign frame identifier range (Mandatory)
 
-constexpr auto BREAK_BYTE = 0x00;
-constexpr auto SYNC_BYTE = 0x55;
+
+// DTL standard payload
+constexpr auto SID_TO_RSID_MASK = 0x40;
+constexpr auto DTL_NEGATIVE_RESPONSE = 0x7F;
+
+// Negative Response Codes NRC
+constexpr auto NRC_GENERAL_REJECT = 0x10;
+constexpr auto NRC_SERVICE_NOT_SUPPORTED = 0x11;
+constexpr auto NRC_SUBFUNCTION_NOT_SUPPORTED = 0x12;
+constexpr auto NRC_INCORRECT_MSG_LENGTH_OR_INVALID_FORMAT = 0x13;
+constexpr auto NRC_RESPONSE_TOO_LONG = 0x14;
+constexpr auto NRC_BUSY_REPEAT_REQUEST = 0x21;
+constexpr auto NRC_CONDITIONS_NOT_CORRECT = 0x22;
+constexpr auto NRC_REQUEST_OUT_OF_RANGE = 0x31;
+constexpr auto NRC_SECURITY_ACCESS_DENIED = 0x33;
+constexpr auto NRC_INVALID_KEY = 0x35;
+
 
 // send wakeup command by sending a bus dominant for 1.6ms (at 9600 Baud)
 void Lin_Interface::writeCmdWakeup()
@@ -72,7 +96,7 @@ void Lin_Interface::writeCmdSleep()
     // Lin Protocol Specification 2.1 Chapter 2.6.3 Go To Sleep
     // Request from master to all nodes to go to sleep
     // only NodeID=0 shall be considered by nodes
-    LinMessage[0] = 0;    // NodeId
+    LinMessage[0] = 0;    // NodeId = All Slaves
     LinMessage[1] = 0xFF; // PCI
     LinMessage[2] = 0xFF; // SID
     LinMessage[3] = 0xFF; // D1
@@ -81,7 +105,85 @@ void Lin_Interface::writeCmdSleep()
     LinMessage[6] = 0xFF; // D4
     LinMessage[7] = 0xFF; // D5
 
-    writeFrame(0x3C, 8);
+    writeDiagnosticMasterRequest();
+}
+
+bool Lin_Interface::writeDiagnosticMasterRequest()
+{
+    // preserve SID for response evaluation
+    uint8_t SID = LinMessage[0];
+
+    writeFrame(FRAME_ID_MASTER_REQUEST, 8);
+    bool chkSumValid = readFrame(FRAME_ID_SLAVE_REQUEST);
+
+    // evaluate Negative response
+    if (DTL_NEGATIVE_RESPONSE == LinMessage[0])
+    {
+        if (verboseMode > 0)
+        {
+            Serial.print("writeDiagnosticMasterRequest failed: SID=0x");
+            Serial.print(LinMessage[1], HEX);
+            Serial.print(" Error Code=0x");
+            Serial.print(LinMessage[2], HEX);
+            Serial.print(" = ");
+            switch (LinMessage[2])
+            {
+                case NRC_GENERAL_REJECT:
+                    Serial.print("NRC_GENERAL_REJECT");
+                    break;
+                case NRC_SERVICE_NOT_SUPPORTED:
+                    Serial.print("NRC_SERVICE_NOT_SUPPORTED");
+                    break;
+                case NRC_SUBFUNCTION_NOT_SUPPORTED:
+                    Serial.print("NRC_SUBFUNCTION_NOT_SUPPORTED");
+                    break;
+                case NRC_INCORRECT_MSG_LENGTH_OR_INVALID_FORMAT:
+                    Serial.print("NRC_INCORRECT_MSG_LENGTH_OR_INVALID_FORMAT");
+                    break;
+                case NRC_RESPONSE_TOO_LONG:
+                    Serial.print("NRC_RESPONSE_TOO_LONG");
+                    break;
+                case NRC_BUSY_REPEAT_REQUEST:
+                    Serial.print("NRC_BUSY_REPEAT_REQUEST");
+                    break;
+                case NRC_CONDITIONS_NOT_CORRECT:
+                    Serial.print("NRC_CONDITIONS_NOT_CORRECT");
+                    break;
+                case NRC_REQUEST_OUT_OF_RANGE:
+                    Serial.print("NRC_REQUEST_OUT_OF_RANGE");
+                    break;
+                case NRC_SECURITY_ACCESS_DENIED:
+                    Serial.print("NRC_SECURITY_ACCESS_DENIED");
+                    break;
+                case NRC_INVALID_KEY:
+                    Serial.print("NRC_INVALID_KEY");
+                    break;
+            }
+            Serial.println();
+        }
+        return false;
+    }
+
+    // irregular Response
+    if ((SID | SID_TO_RSID_MASK) != LinMessage[0])
+    {
+        Serial.print("writeDiagnosticMasterRequest failed irregular");
+        return false;
+    }
+
+    // success
+    if (verboseMode > 0)
+    {
+        // TODO: validation on SID == LinMessage[1]
+
+        Serial.print("DiagnosticMaster Response: SID=0x");
+        Serial.print(LinMessage[1], HEX);
+        Serial.print(" Error Code=0x");
+        Serial.print(LinMessage[2], HEX);
+        Serial.println();
+    }
+    return true;
+
 }
 
 /// @brief reads data from a lin device by requesting a specific FrameID
@@ -413,7 +515,7 @@ uint8_t Lin_Interface::getChecksum(const uint8_t ProtectedID, const uint8_t data
     uint16_t sum = 0x00;
 
     // consider configuration and reserved frames
-    if ((ProtectedID & 0x3F) < 0x3C)
+    if ((ProtectedID & 0x3F) < FRAME_ID_MASTER_REQUEST)
     {
         // for LIN 2.0 configuration and reserved frames:
         //   include Protected ID in Checksum calculation
