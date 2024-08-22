@@ -18,7 +18,7 @@
 // 1-125 (0x7D) = Slave Node Adress (NAD)
 // 126   (0x7E) = functional node adress (functional NAD), only used for diagnostic
 // 127   (0x7F) = Slave node adress broadcast (broadcast NAD)
-// 128   (0x80) 
+// 128   (0x80)
 // 255   (0xFF) = Free usage
 
 // Lin Transport Layer Specification 2.1 Chapter 3.2.1.3 PCI
@@ -134,21 +134,24 @@ bool Lin_Interface::readFrame(const uint8_t FrameID, const uint8_t expectedDataL
 
         switch (bytes_received)
         {
-        case START_IDX:         // ??
-        case BREAK_IDX:         // break = 0x00
-        case SYNC_IDX:          // sync = SYNC_BYTE
-        case PROTECTED_ID_IDX:  // Protected ID
+        case START_IDX:        // ??
+        case BREAK_IDX:        // break = 0x00
+        case SYNC_IDX:         // sync = SYNC_BYTE
+        case PROTECTED_ID_IDX: // Protected ID
         {
             // discard Sync and PID (send by us)
             uint8_t buffer = HardwareSerial::read();
             // Sync and PID may to be verified here
-            if (buffer == BREAK_BYTE) {
+            if (buffer == BREAK_BYTE)
+            {
                 bytes_received = BREAK_IDX;
             }
-            if (buffer == SYNC_BYTE) {
+            if (buffer == SYNC_BYTE)
+            {
                 bytes_received = SYNC_IDX;
             }
-            if (buffer == ProtectedID) {
+            if (buffer == ProtectedID)
+            {
                 bytes_received = PROTECTED_ID_IDX;
             }
             break;
@@ -164,7 +167,8 @@ bool Lin_Interface::readFrame(const uint8_t FrameID, const uint8_t expectedDataL
 
     // erase data in buffer, in case a 9th or 10th Byte was received
     HardwareSerial::flush();
-    while (HardwareSerial::available()) {
+    while (HardwareSerial::available())
+    {
         HardwareSerial::read();
         if (verboseMode > 0)
         {
@@ -182,7 +186,8 @@ bool Lin_Interface::readFrame(const uint8_t FrameID, const uint8_t expectedDataL
         Serial.printf(" --->>>>>> FID %02Xh        = 55|%02X|", FrameID, ProtectedID);
         for (int i = 0; i < 8; ++i)
         {
-            if (i >= bytes_received) {
+            if (i >= bytes_received)
+            {
                 break;
             }
             Serial.printf("%02X.", LinMessage[i]);
@@ -191,13 +196,15 @@ bool Lin_Interface::readFrame(const uint8_t FrameID, const uint8_t expectedDataL
         if (bytes_received > 0)
         {
             Serial.printf("\b|%02X", Checksum);
-            Serial.printf(" bytes received %d",bytes_received);
+            Serial.printf(" bytes received %d", bytes_received);
 
             if (!ChecksumValid)
             {
                 Serial.printf(" Checksum failed");
             }
-        } else {
+        }
+        else
+        {
             Serial.printf(" no bytes received");
         }
 
@@ -230,7 +237,7 @@ void Lin_Interface::writeFrame(uint8_t FrameID, uint8_t dataLen)
     delay(20);
 
 /// TODO: read back of the break needs to be verified
-    //verboseMode = 1;
+    // verboseMode = 1;
 
     // Read Break and discard
     if (HardwareSerial::available())
@@ -243,7 +250,7 @@ void Lin_Interface::writeFrame(uint8_t FrameID, uint8_t dataLen)
     {
         RX_Sync = HardwareSerial::read();
     }
-    //Read PID
+    // Read PID
     uint8_t RX_ProtectedID = 0x00;
     if (HardwareSerial::available())
     {
@@ -339,17 +346,20 @@ void Lin_Interface::writeFrameClassicNoChecksum(uint8_t FrameID, uint8_t dataLen
 void Lin_Interface::startTransmission(uint8_t ProtectedID)
 {
     // start UART
-    if (rxPin < 0 && txPin < 0) {
-        //no custom pins are defined
+    if (rxPin < 0 && txPin < 0)
+    {
+        // no custom pins are defined
         HardwareSerial::begin(baud, SERIAL_8N1);
-    } else {
+    }
+    else
+    {
         HardwareSerial::begin(baud, SERIAL_8N1, rxPin, txPin);
     }
 
     writeBreak();                       // initiate Frame with a Break
     HardwareSerial::write(SYNC_BYTE);   // Sync
     HardwareSerial::write(ProtectedID); // PID
-} 
+}
 
 /// Send a Break for introduction of a Frame
 /// This is done by sending a Byte (0x00) + Stop Bit by using half baud rate
