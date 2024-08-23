@@ -42,6 +42,7 @@ protected:
     uint32_t m_bitCycles;
     void startTransmission(const uint8_t ProtectedID);
     size_t writeBreak();
+    size_t writeSync();
     uint8_t getProtectedID(const uint8_t FrameID);
     uint8_t getChecksum(const uint8_t ProtectedID, const uint8_t datalen);
     bool isChecksumValid(const uint8_t Checksum, const uint8_t ProtectedID, const size_t bytes_received);

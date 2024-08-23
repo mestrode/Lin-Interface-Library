@@ -13,8 +13,8 @@
 
 #include <Arduino.h>
 
-constexpr auto BREAK_BYTE = 0x00;
-constexpr auto SYNC_BYTE = 0x55;
+constexpr uint8_t LIN_BREAK = 0x00;
+constexpr uint8_t LIN_SYNC_FIELD = 0x55;
 
 // Lin Config and ID Specification 2.1 Chapter 4.2.3.2 NAD
 // 0            = go sleep command
@@ -80,7 +80,7 @@ void Lin_Interface::writeCmdWakeup()
     HardwareSerial::updateBaudRate(baud >> 1);
     // write 0x00, including Stop-Bit (=1),
     // qualifies when writing in slow motion for a wake-up-request
-    write(uint8_t(BREAK_BYTE));
+    write(uint8_t(LIN_BREAK));
     // ensure this is send
     HardwareSerial::flush();
     // restore normal speed
@@ -238,17 +238,17 @@ bool Lin_Interface::readFrame(const uint8_t FrameID, const uint8_t expectedDataL
         {
         case START_IDX:        // ??
         case BREAK_IDX:        // break = 0x00
-        case SYNC_IDX:         // sync = SYNC_BYTE
+        case SYNC_IDX:         // sync = LIN_SYNC_FIELD
         case PROTECTED_ID_IDX: // Protected ID
         {
             // discard Sync and PID (send by us)
             uint8_t buffer = HardwareSerial::read();
             // Sync and PID may to be verified here
-            if (buffer == BREAK_BYTE)
+            if (buffer == LIN_BREAK)
             {
                 bytes_received = BREAK_IDX;
             }
-            if (buffer == SYNC_BYTE)
+            if (buffer == LIN_SYNC_FIELD)
             {
                 bytes_received = SYNC_IDX;
             }
@@ -459,7 +459,7 @@ void Lin_Interface::startTransmission(const uint8_t ProtectedID)
     }
 
     writeBreak();                       // initiate Frame with a Break
-    HardwareSerial::write(SYNC_BYTE);   // Sync
+    writeSync();                        // Sync
     HardwareSerial::write(ProtectedID); // PID
 }
 
@@ -473,11 +473,17 @@ size_t Lin_Interface::writeBreak()
     HardwareSerial::updateBaudRate(baud >> 1);
     // write 0x00, including Stop-Bit (=1),
     // qualifies when writing in slow motion like a Break in normal speed
-    size_t ret = HardwareSerial::write(uint8_t(0x00));
+    size_t ret = HardwareSerial::write(LIN_BREAK);
     // ensure this is send
     HardwareSerial::flush();
     // restore normal speed
     HardwareSerial::updateBaudRate(baud);
+    return ret;
+}
+
+size_t Lin_Interface::writeSync()
+{
+    size_t ret = HardwareSerial::write(LIN_SYNC_FIELD);
     return ret;
 }
 
