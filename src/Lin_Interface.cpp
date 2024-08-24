@@ -13,6 +13,8 @@
 
 #include <Arduino.h>
 
+constexpr auto TIMEOUT_INTERVAL = 11; // ms = 10 Bytes @ 9600 Baud (including start+stop bits)
+
 constexpr uint8_t LIN_BREAK = 0x00;
 constexpr uint8_t LIN_SYNC_FIELD = 0x55;
 
@@ -324,6 +326,7 @@ bool Lin_Interface::readFrame(const uint8_t FrameID, const uint8_t expectedDataL
 /// @param dataLen count of data within the LinMessage array (containing only the data) should be transmitted
 void Lin_Interface::writeFrame(const uint8_t FrameID, const uint8_t dataLen)
 {
+    // ---------------------------- write Message
     uint8_t ProtectedID = getProtectedID(FrameID);
     uint8_t cksum = getChecksum(ProtectedID, dataLen);
 
@@ -335,29 +338,23 @@ void Lin_Interface::writeFrame(const uint8_t FrameID, const uint8_t dataLen)
     }
     HardwareSerial::write(cksum);
 
-    // wait for available data
-    delay(20);
+    // ---------------------------- read Answer
 
-/// TODO: read back of the break needs to be verified
     // verboseMode = 1;
 
     // Read Break and discard
-    if (HardwareSerial::available())
-    {
-        HardwareSerial::read();
-    }
+    if (!waitForData(TIMEOUT_INTERVAL)) { return false; }
+    HardwareSerial::read();
+/// TODO: read back of the break needs to be verified
+
     // Read Sync
-    uint8_t RX_Sync = 0x00;
-    if (HardwareSerial::available())
-    {
-        RX_Sync = HardwareSerial::read();
-    }
+    if (!waitForData(TIMEOUT_INTERVAL)) { return false; }
+    uint8_t RX_Sync = HardwareSerial::read();
+
     // Read PID
-    uint8_t RX_ProtectedID = 0x00;
-    if (HardwareSerial::available())
-    {
-        RX_ProtectedID = HardwareSerial::read();
-    }
+    if (!waitForData(TIMEOUT_INTERVAL)) { return false; }
+    uint8_t RX_ProtectedID = HardwareSerial::read();
+
     // read DATA + CHKSUM
     bool moreData = false;
     int bytes_received = 0;
