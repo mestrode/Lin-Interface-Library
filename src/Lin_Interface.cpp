@@ -487,6 +487,23 @@ size_t Lin_Interface::writeSync()
     return ret;
 }
 
+bool Lin_Interface::waitForData(unsigned long timeout)
+{
+    unsigned long startMillis = millis();
+
+    while (!HardwareSerial::available())
+    {
+        if (millis() - startMillis >= timeout)
+        {
+            // timeout
+            return false;
+        }
+    }
+
+    // data avaliable
+    return true;
+}
+
 /// get Protected ID by calculating parity bits and combine with Frame ID
 /// @param FrameID to be converted
 /// @return Protected ID
