@@ -26,12 +26,6 @@ constexpr uint8_t LIN_SYNC_FIELD = 0x55;
 // 128   (0x80)
 // 255   (0xFF) = Free usage
 
-// Lin Transport Layer Specification 2.1 Chapter 3.2.1.3 PCI
-// high nibble = PCI type, low nibble = length
-//  Single Frame      0b0000 length
-//  First Frame       0b0001 length / 256 = high byte of length; low byte of length will be transmitted in len
-//  Consecutive Frame 0b0010 FrameCounter % 16, starting with one
-
 // LIN Specification said abaout FrameIDs:
 //    0-50 (0x00-0x3B) are used for normal Signal/data carrying frames.
 //    60 (0x3C) and 61 (0x3D) are used to carry diagnostic and configuration data.
@@ -39,11 +33,30 @@ constexpr uint8_t LIN_SYNC_FIELD = 0x55;
 constexpr auto FRAME_ID_MASTER_REQUEST = 0x3C;
 constexpr auto FRAME_ID_SLAVE_REQUEST = 0x3D;
 
-// Lin Transport Layer Specification 2.1 Chapter 3.2.1.5 SID
-// Service Indentifier
-// 0x00-0xAF   and
-// 0xB8-0xFE = diagnostics
-// ---- - node configuration
+// Source https://www.lin-cia.org/fileadmin/microsites/lin-cia.org/resources/documents/LIN_2.2A.pdf
+// 4.2.3.2 NAD = Node Address
+constexpr uint8_t NAD_SLEEP = 0x00; // Reserved for go to sleep command, see Section 2.6.3
+// 0x01 - 0x7D = Slave node adresses (NAD)
+constexpr uint8_t NAD_FUNCTIONAL = 0x7E; // Functional node address (functional NAD), only used for diagnostics (using the transport layer)
+constexpr uint8_t NAD_BROADCAST = 0x7F; // Slave node address broadcast (broadcast NAD)
+// 0x80 - 0xFF = Free Usage
+
+// 3.2.1.3 PCI
+// 4.2.3.3 PCI = Protocol Control Information (= Length of Message)
+// 0x0L = high nibble == 0 --> Single Frame, message fits into the single PDU
+//      = low  nibble == length of message --> SID + max 5 Bytes --> length = max. 6 
+
+// not implemented here:
+// 0x1? = high nibble == 1 --> First Frame
+//      = low  nibble  == length / 256
+// 0x2? = high nibble == 2 --> Frame Counter, Consecutive Frame
+//      = low  nibble == FrameCounter % 16, starting with one
+
+// 3.2.1.4 SID
+// 4.2.3.5 SID = Service Identifier
+// 0x00 - 0xAF = diagnostic
+// 0xB0 - 0xB7 = node configuration
+// 0xB8 - 0xFE = diagnostic
 constexpr auto SID_ASSIGN_NAD = 0xB0; // Assign NAD (Optional)
 constexpr auto SID_ASSIGN_FRAME_ID = 0xB1; // Assign Frame Identifier (obsolete, see Lin 2.0)
 constexpr auto SID_READ_BY_ID = 0xB2; // Read by Identifier (Mandatory)
@@ -53,9 +66,17 @@ constexpr auto SID_RESERVED = 0xB5; // Assign NAD via SNPD (reserved for Node Po
 constexpr auto SID_SAVE_CONFIG = 0xB6; // Save Configuration (Optional)
 constexpr auto SID_ASSIGN_FRAME_IDENTIFIER_RANGE = 0xB7; // Assign frame identifier range (Mandatory)
 
+// 4.2.3.5 RSID = Response Service Identifier
+// RSID = SID + 0x40
+constexpr auto SID_TO_RSID_MASK = 0x40;
+
+// 4.2.3.6 D1 to D5
+// up to five data bytes in a node configuration PDU
+// interpretation depends on SID / RSID
+
+// ------------------------------------
 
 // DTL standard payload
-constexpr auto SID_TO_RSID_MASK = 0x40;
 constexpr auto DTL_NEGATIVE_RESPONSE = 0x7F;
 
 // Negative Response Codes NRC
@@ -95,10 +116,10 @@ void Lin_Interface::writeCmdWakeup()
 /// @brief Request bus cluster to go to sleep
 void Lin_Interface::writeCmdSleep()
 {
-    // Lin Protocol Specification 2.1 Chapter 2.6.3 Go To Sleep
+    // https://www.lin-cia.org/fileadmin/microsites/lin-cia.org/resources/documents/LIN_2.2A.pdf
+    // 2.6.3 Go To Sleep
     // Request from master to all nodes to go to sleep
-    // only NodeID=0 shall be considered by nodes
-    LinMessage[0] = 0;    // NodeId = All Slaves
+    LinMessage[0] = NAD_SLEEP; // NAD = All Slaves
     LinMessage[1] = 0xFF; // PCI
     LinMessage[2] = 0xFF; // SID
     LinMessage[3] = 0xFF; // D1
@@ -330,13 +351,14 @@ bool Lin_Interface::writeFrame(const uint8_t FrameID, const uint8_t dataLen)
     uint8_t ProtectedID = getProtectedID(FrameID);
     uint8_t cksum = getChecksum(ProtectedID, dataLen);
 
-    startTransmission(ProtectedID);
+    startTransmission(ProtectedID); // Break, Sync, PID
 
     for (int i = 0; i < dataLen; ++i)
     {
-        HardwareSerial::write(LinMessage[i]); // Message (array from 1..8)
+        HardwareSerial::write(LinMessage[i]); // Data (array from 1..8)
     }
-    HardwareSerial::write(cksum);
+
+    HardwareSerial::write(chksum); // ChkSum
 
     // ---------------------------- read Answer
 
