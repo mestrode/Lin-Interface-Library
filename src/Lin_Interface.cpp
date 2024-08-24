@@ -138,7 +138,7 @@ void Lin_Interface::writeCmdSleep()
 bool Lin_Interface::writeDiagnosticMasterRequest()
 {
     // preserve SID for response evaluation
-    uint8_t SID = LinMessage[0];
+    uint8_t SID = LinMessage[2];
 
     writeFrame(FRAME_ID_MASTER_REQUEST, 8);
     bool chkSumValid = readFrame(FRAME_ID_SLAVE_REQUEST);
