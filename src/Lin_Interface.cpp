@@ -319,7 +319,7 @@ bool Lin_Interface::writeFrame(const uint8_t FrameID, const uint8_t dataLen)
 {
     // ---------------------------- write Message
     uint8_t ProtectedID = getProtectedID(FrameID);
-    uint8_t cksum = getChecksum(ProtectedID, dataLen);
+    uint8_t chksum = getChecksum(ProtectedID, dataLen);
 
     startTransmission(ProtectedID); // Break, Sync, PID
 
@@ -348,28 +348,22 @@ bool Lin_Interface::writeFrame(const uint8_t FrameID, const uint8_t dataLen)
     uint8_t RX_ProtectedID = HardwareSerial::read();
 
     // read DATA + CHKSUM
-    bool moreData = false;
     int bytes_received = 0;
-    while (HardwareSerial::available())
+    for (bytes_received = 0; bytes_received < 8 + 1; ++bytes_received)
     {
-        if (bytes_received >= 8 + 1 + 4)
-        {
-            // receive max 9 Bytes = 8 Data + 1 Chksum
-            moreData = true;
-            break;
-        }
-        // Receive Byte from Bus (Slave)
+        if (!waitForData(TIMEOUT_INTERVAL)) { return false; }
         LinMessage[bytes_received] = HardwareSerial::read();
-        bytes_received++;
     }
-    uint8_t Checksum_received = LinMessage[bytes_received - 1];
+
+    // seperate ChkSumRx
+    uint8_t ChkSumRx = LinMessage[bytes_received - 1];
     bytes_received--;
 
     // erase data in buffer, in case a 9th or 10th Byte was received
-    HardwareSerial::flush();
+//    HardwareSerial::flush();
     HardwareSerial::end();
 
-    // use received PID  for verification
+    // use received PID for verification
     uint8_t ChkSumCalc = getChecksum(RX_ProtectedID, bytes_received);
 
     printTxFrame(FrameID, ProtectedID, RX_Sync, RX_ProtectedID, bytes_received, ChkSumRx, ChkSumCalc, chksum);
@@ -387,7 +381,7 @@ bool Lin_Interface::writeFrame(const uint8_t FrameID, const uint8_t dataLen)
 void Lin_Interface::writeFrameClassic(const uint8_t FrameID, const uint8_t dataLen)
 {
     uint8_t ProtectedID = getProtectedID(FrameID);
-    uint8_t cksum = getChecksum(0x00, dataLen);
+    uint8_t chksum = getChecksum(0x00, dataLen);
 
     startTransmission(ProtectedID);
 
@@ -395,7 +389,7 @@ void Lin_Interface::writeFrameClassic(const uint8_t FrameID, const uint8_t dataL
     {
         HardwareSerial::write(LinMessage[i]); // Message (array from 1..8)
     }
-    HardwareSerial::write(cksum);
+    HardwareSerial::write(chksum);
     HardwareSerial::flush();
 
 /// TODO: verification of written data (see Lin_Interface::writeFrame)
