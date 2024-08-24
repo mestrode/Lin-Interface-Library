@@ -13,6 +13,10 @@
 
 #include <Arduino.h>
 
+#include "DebugStream.hpp"
+
+DebugStream Debug(&Serial, 2);
+
 constexpr auto TIMEOUT_INTERVAL = 11; // ms = 10 Bytes @ 9600 Baud (including start+stop bits)
 
 constexpr uint8_t LIN_BREAK = 0x00;
@@ -142,71 +146,71 @@ bool Lin_Interface::writeDiagnosticMasterRequest()
     // evaluate Negative response
     if (DTL_NEGATIVE_RESPONSE == LinMessage[0])
     {
-        if (verboseMode > 0)
+        Debug.print(0, "writeDiagnosticMasterRequest failed: SID=0x");
+        Debug.print(0, LinMessage[1], HEX);
+        Debug.print(0, " Error Code=0x");
+        Debug.print(0, LinMessage[2], HEX);
+        Debug.print(0, " = ");
+        switch (LinMessage[2])
         {
-            Serial.print("writeDiagnosticMasterRequest failed: SID=0x");
-            Serial.print(LinMessage[1], HEX);
-            Serial.print(" Error Code=0x");
-            Serial.print(LinMessage[2], HEX);
-            Serial.print(" = ");
-            switch (LinMessage[2])
-            {
-                case NRC_GENERAL_REJECT:
-                    Serial.print("NRC_GENERAL_REJECT");
-                    break;
-                case NRC_SERVICE_NOT_SUPPORTED:
-                    Serial.print("NRC_SERVICE_NOT_SUPPORTED");
-                    break;
-                case NRC_SUBFUNCTION_NOT_SUPPORTED:
-                    Serial.print("NRC_SUBFUNCTION_NOT_SUPPORTED");
-                    break;
-                case NRC_INCORRECT_MSG_LENGTH_OR_INVALID_FORMAT:
-                    Serial.print("NRC_INCORRECT_MSG_LENGTH_OR_INVALID_FORMAT");
-                    break;
-                case NRC_RESPONSE_TOO_LONG:
-                    Serial.print("NRC_RESPONSE_TOO_LONG");
-                    break;
-                case NRC_BUSY_REPEAT_REQUEST:
-                    Serial.print("NRC_BUSY_REPEAT_REQUEST");
-                    break;
-                case NRC_CONDITIONS_NOT_CORRECT:
-                    Serial.print("NRC_CONDITIONS_NOT_CORRECT");
-                    break;
-                case NRC_REQUEST_OUT_OF_RANGE:
-                    Serial.print("NRC_REQUEST_OUT_OF_RANGE");
-                    break;
-                case NRC_SECURITY_ACCESS_DENIED:
-                    Serial.print("NRC_SECURITY_ACCESS_DENIED");
-                    break;
-                case NRC_INVALID_KEY:
-                    Serial.print("NRC_INVALID_KEY");
-                    break;
-            }
-            Serial.println();
+            case NRC_GENERAL_REJECT:
+                Debug.print(0, "NRC_GENERAL_REJECT");
+                break;
+            case NRC_SERVICE_NOT_SUPPORTED:
+                Debug.print(0, "NRC_SERVICE_NOT_SUPPORTED");
+                break;
+            case NRC_SUBFUNCTION_NOT_SUPPORTED:
+                Debug.print(0, "NRC_SUBFUNCTION_NOT_SUPPORTED");
+                break;
+            case NRC_INCORRECT_MSG_LENGTH_OR_INVALID_FORMAT:
+                Debug.print(0, "NRC_INCORRECT_MSG_LENGTH_OR_INVALID_FORMAT");
+                break;
+            case NRC_RESPONSE_TOO_LONG:
+                Debug.print(0, "NRC_RESPONSE_TOO_LONG");
+                break;
+            case NRC_BUSY_REPEAT_REQUEST:
+                Debug.print(0, "NRC_BUSY_REPEAT_REQUEST");
+                break;
+            case NRC_CONDITIONS_NOT_CORRECT:
+                Debug.print(0, "NRC_CONDITIONS_NOT_CORRECT");
+                break;
+            case NRC_REQUEST_OUT_OF_RANGE:
+                Debug.print(0, "NRC_REQUEST_OUT_OF_RANGE");
+                break;
+            case NRC_SECURITY_ACCESS_DENIED:
+                Debug.print(0, "NRC_SECURITY_ACCESS_DENIED");
+                break;
+            case NRC_INVALID_KEY:
+                Debug.print(0, "NRC_INVALID_KEY");
+                break;
         }
+        Debug.println(0);
         return false;
     }
 
     // irregular Response
     if ((SID | SID_TO_RSID_MASK) != LinMessage[0])
     {
-        Serial.print("writeDiagnosticMasterRequest failed irregular");
+        Debug.print(-1, "writeDiagnosticMasterRequest failed irregular");
         return false;
     }
 
-    // success
-    if (verboseMode > 0)
-    {
+    // success --> (SID | SID_TO_RSID_MASK) == LinMessage[0]
         // TODO: validation on SID == LinMessage[1]
 
-        Serial.print("DiagnosticMaster Response: SID=0x");
-        Serial.print(LinMessage[1], HEX);
-        Serial.print(" Error Code=0x");
-        Serial.print(LinMessage[2], HEX);
-        Serial.println();
-    }
-    return true;
+    Debug.print(0, "DiagnosticMaster Response: SID=0x");
+    Debug.print(0, LinMessage[1], HEX);
+    Debug.print(0, " Error Code=0x");
+    Debug.print(0, LinMessage[2], HEX);
+    Debug.print(0, " unused=0x");
+    Debug.print(0, LinMessage[3], HEX);
+    Debug.print(0, " ");
+    Debug.print(0, LinMessage[4], HEX);
+    Debug.print(0, " ");
+    Debug.print(0, LinMessage[5], HEX);
+    Debug.println(0, "");
 
+    return true;
 }
 
 /// @brief reads data from a lin device by requesting a specific FrameID
@@ -295,46 +299,12 @@ bool Lin_Interface::readFrame(const uint8_t FrameID, const uint8_t expectedDataL
     while (HardwareSerial::available())
     {
         HardwareSerial::read();
-        if (verboseMode > 0)
-        {
-            Serial.print("additional byte discarded\n");
-        }
+        Debug.print(0, "additional byte discarded\n");
     }
 
     HardwareSerial::end();
 
-    // verify Checksum
-    ChecksumValid = (bytes_received > 0) && isChecksumValid(Checksum, ProtectedID, bytes_received);
-
-    if (verboseMode > 0)
-    {
-        Serial.printf(" --->>>>>> FID %02Xh        = 55|%02X|", FrameID, ProtectedID);
-        for (int i = 0; i < 8; ++i)
-        {
-            if (i >= bytes_received)
-            {
-                break;
-            }
-            Serial.printf("%02X.", LinMessage[i]);
-        }
-
-        if (bytes_received > 0)
-        {
-            Serial.printf("\b|%02X", Checksum);
-            Serial.printf(" bytes received %d", bytes_received);
-
-            if (!ChecksumValid)
-            {
-                Serial.printf(" Checksum failed");
-            }
-        }
-        else
-        {
-            Serial.printf(" no bytes received");
-        }
-
-        Serial.println();
-    }
+    printRxFrame(ChecksumValid, bytes_received, Checksum, ProtectedID, FrameID);
 
     return ChecksumValid;
 } // bool readFrame()
@@ -402,28 +372,10 @@ bool Lin_Interface::writeFrame(const uint8_t FrameID, const uint8_t dataLen)
     // use received PID  for verification
     uint8_t ChkSumCalc = getChecksum(RX_ProtectedID, bytes_received);
 
-    if (verboseMode > 0)
-    {
-        Serial.printf(" <<<<<<--- FID %02Xh (%02X)   = %02X|%02X|", FrameID, ProtectedID, RX_Sync, RX_ProtectedID);
-        for (int i = 0; i < 8 + 1 + 4; ++i)
-        {
-            if (i >= bytes_received)
-                break;
-            Serial.printf("%02X ", LinMessage[i]);
-        }
+    printTxFrame(FrameID, ProtectedID, RX_Sync, RX_ProtectedID, bytes_received, ChkSumRx, ChkSumCalc, chksum);
 
-        Serial.printf("\b|%02X", Checksum_received);
-        if (Checksum_received != ChkSumCalc)
-        {
-            Serial.printf("\b != ChkSum calc %02Xh| TX %02Xh ", ChkSumCalc, cksum);
-        }
-
-        if (moreData)
-        {
-            Serial.print("more Bytes available");
-        }
-
-        Serial.println();
+    if (ChkSumRx != ChkSumCalc) {
+        return false;
     }
 
     return true;
@@ -586,10 +538,65 @@ bool Lin_Interface::isChecksumValid(const uint8_t Checksum, const uint8_t Protec
     constexpr uint8_t CHECKSUM_MASK = 0xFF;
     bool valid = CHECKSUM_MASK == static_cast<uint8_t>(Checksum + static_cast<uint8_t>(~getChecksum(ProtectedID, bytes_received)));
 
-    if (!valid && verboseMode > 0)
+    if (!valid)
     {
-        Serial.println("Checksum verification failed.");
+        Debug.println(0, "Checksum verification failed.");
     }
 
     return valid;
+}
+
+void Lin_Interface::printRxFrame(bool &ChecksumValid, int8_t bytes_received, uint8_t Checksum, uint8_t ProtectedID, const uint8_t FrameID)
+{
+    if (Debug.getDebugLevel() >= 0)
+    {
+        return;
+    }
+    
+    // verify Checksum
+    ChecksumValid = (bytes_received > 0) && isChecksumValid(Checksum, ProtectedID, bytes_received);
+
+    Debug.printf(0, " --->>>>>> FID %02Xh        = 55|%02X|", FrameID, ProtectedID);
+    for (int i = 0; i < bytes_received; ++i)
+    {
+        Debug.printf(0, "%02X.", LinMessage[i]);
+    }
+
+    if (bytes_received > 0)
+    {
+        Debug.printf(0, "\b|%02X", Checksum);
+        Debug.printf(0, " bytes received %d", bytes_received);
+
+        if (!ChecksumValid)
+        {
+            Debug.printf(0, " Checksum failed");
+        }
+    }
+    else
+    {
+        Debug.printf(0, " no bytes received");
+    }
+
+    Debug.println(0);
+}
+
+void Lin_Interface::printTxFrame(const uint8_t FrameID, uint8_t ProtectedID, uint8_t RX_Sync, uint8_t RX_ProtectedID, int bytes_received, uint8_t ChkSumRx, uint8_t ChkSumCalc, uint8_t chksum)
+{
+    if (Debug.getDebugLevel() >= 0)
+    {
+        return;
+    }
+    
+    Debug.printf(0, " <<<<<<--- FID %02Xh (%02X)   = %02X|%02X|", FrameID, ProtectedID, RX_Sync, RX_ProtectedID);
+    for (int i = 0; i < bytes_received; ++i)
+    {
+        Debug.printf(0, "%02X ", LinMessage[i]);
+    }
+    Debug.printf(2, "\b|%02X", ChkSumRx);
+
+    if (ChkSumRx != ChkSumCalc)
+    {
+        Debug.printf(0, "\b != ChkSum calc %02Xh| TX %02Xh\n", ChkSumCalc, chksum);
+    }
+    Debug.println(0);
 }

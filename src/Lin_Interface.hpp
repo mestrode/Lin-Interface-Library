@@ -47,4 +47,7 @@ protected:
     uint8_t getProtectedID(const uint8_t FrameID);
     uint8_t getChecksum(const uint8_t ProtectedID, const uint8_t datalen);
     bool isChecksumValid(const uint8_t Checksum, const uint8_t ProtectedID, const size_t bytes_received);
+
+    void printRxFrame(bool &ChecksumValid, int8_t bytes_received, uint8_t Checksum, uint8_t ProtectedID, const uint8_t FrameID);
+    void printTxFrame(const uint8_t FrameID, uint8_t ProtectedID, uint8_t RX_Sync, uint8_t RX_ProtectedID, int bytes_received, uint8_t ChkSumRx, uint8_t ChkSumCalc, uint8_t cksum);
 };
