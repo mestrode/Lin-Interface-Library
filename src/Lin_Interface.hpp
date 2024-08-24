@@ -34,7 +34,7 @@ public:
 
     bool readFrame(const uint8_t FrameID, const uint8_t expectedDatalen = 0);
 
-    void writeFrame(const uint8_t FrameID, const uint8_t datalen);
+    bool writeFrame(const uint8_t FrameID, const uint8_t datalen);
     void writeFrameClassic(const uint8_t FrameID, const uint8_t datalen);
     void writeFrameClassicNoChecksum(const uint8_t FrameID, const uint8_t datalen);
 

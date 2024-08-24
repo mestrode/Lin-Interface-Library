@@ -324,7 +324,7 @@ bool Lin_Interface::readFrame(const uint8_t FrameID, const uint8_t expectedDataL
 /// The data of this frame is 'dataLen' long and incuded in the Lin_Interface::LinMessage[] array
 /// @param FrameID ID of frame (will be converted to protected ID)
 /// @param dataLen count of data within the LinMessage array (containing only the data) should be transmitted
-void Lin_Interface::writeFrame(const uint8_t FrameID, const uint8_t dataLen)
+bool Lin_Interface::writeFrame(const uint8_t FrameID, const uint8_t dataLen)
 {
     // ---------------------------- write Message
     uint8_t ProtectedID = getProtectedID(FrameID);
@@ -403,6 +403,8 @@ void Lin_Interface::writeFrame(const uint8_t FrameID, const uint8_t dataLen)
 
         Serial.println();
     }
+
+    return true;
 } // void writeFrame()
 
 /// TODO: function needs to be verified
