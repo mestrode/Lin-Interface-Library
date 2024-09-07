@@ -1,6 +1,6 @@
 {
   "name": "Lin-Interface",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "send and request LIN-Frames via UART (Break, Sync, ID, Data, Checksum)",
   "keywords": [
     "LIN",
@@ -17,5 +17,10 @@
     }
   ],
   "license": "GPL-2.0-only",
+  "frameworks": "arduino",
+  "platforms": ["espressif32"],
+  "export": {
+    "exclude": ["test", "docs", "example"]
+  },
   "dependencies": []
 }
