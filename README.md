@@ -1,5 +1,9 @@
 # LIN-Interface-Library
-Send and request data by compiling a LIN Frame and transmitting via Serial-Interface (as a Bus Master)
+LIN-BUS Implementation on Frame, Transportation and Node-Configuration Level
+
+* Send and request data by compiling a LIN Frame and transmitting via Serial-Interface (as a Bus Master)
+* Transportation Layer using Packet Data Unit (PDU)
+* Node Configuration using Service Identifier (SID) and handling negative resposne codes
 
 The HardwareSerial UART of an ESP32 is used. (But in the past I used a software serial and therefore I derived this class in a prior version from the class SoftwareSerial.)
 
@@ -7,6 +11,8 @@ The HardwareSerial UART of an ESP32 is used. (But in the past I used a software 
 I've used a TJA1020 Transceiver on HW side in my project. The chip contains a statemachine, which needs to be controlled before you will be able to write or receive data. To keep things easy, I created a derived class (from this one) which consider the statemachine every time using the bus: https://github.com/mestrode/Lin-Transceiver-Library
 
 # example
+Remark: Current Example uses v.0.0.2. The interface was modified in in Version 1.0.0.
+
 Need a basic example: Take a look into the example folder.
 
 More complex example: Take a look into this repo to see, how this works: https://github.com/mestrode/IBS-Sensor-Library
@@ -81,8 +87,8 @@ See description of Frame 0x3C and 0x3D in the doc folder of this project.
 Don't know if this is valid in general, but at least in the Project IBS-Sensor-Library it worked.
 
 # See also
-LIN Specification provided by Microchip
-https://microchipdeveloper.com/local--files/lin:specification/LIN-Spec_2.2_Rev_A.PDF
+LIN Specification 2.2A provides by lin-cia.org
+https://www.lin-cia.org/fileadmin/microsites/lin-cia.org/resources/documents/LIN_2.2A.pdf
 
 IBS-Sensor-Library
 https://github.com/mestrode/IBS-Sensor-Library

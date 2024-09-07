@@ -1,10 +1,11 @@
 {
   "name": "Lin-Interface",
-  "version": "0.0.3",
-  "description": "send and request LIN-Frames via UART (Break, Sync, ID, Data, Checksum)",
+  "version": "1.0.0",
+  "description": "LIN-Bus Implementation (using UART) for Frames, Transportation and Node Configuration ",
   "keywords": [
     "LIN",
-    "Lin-Bus"
+    "Lin-Bus",
+    "Lin-Node"
   ],
   "repository": {
     "type": "git",
@@ -17,5 +18,11 @@
     }
   ],
   "license": "GPL-2.0-only",
-  "dependencies": []
+  "frameworks": "arduino",
+  "platforms": ["espressif32"],
+  "export": {
+    "exclude": ["test", "docs", "example"]
+  },
+  "dependencies": {
+  }
 }

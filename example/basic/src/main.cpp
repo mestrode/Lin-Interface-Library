@@ -1,8 +1,8 @@
 #include <Arduino.h>
-#include <Lin_Interface.hpp>
+#include <LinFrameTransfer.hpp>
 
 // using UART 1 for LinBus
-Lin_Interface LinBus(1);
+LinFrameTransfer LinBus(1);
 
 // data to be filled by bus request
 float Cap_Max = 0.0;
