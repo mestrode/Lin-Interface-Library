@@ -1,8 +1,8 @@
 #include <Arduino.h>
-#include <Lin_Interface.hpp>
+#include <LinFrameTransfer.hpp>
 
 // using UART 1 for LinBus
-Lin_Interface LinBus(1);
+LinFrameTransfer LinBus(1);
 
 int LIN_ScanIDs()
 {
