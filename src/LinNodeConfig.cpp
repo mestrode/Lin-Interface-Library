@@ -15,6 +15,11 @@
     #include <Arduino.h>
 #endif
 
+#include <optional>
+#include <vector>
+
+#include "LinFrameTransfer.hpp"
+
 /// @brief send wakeup command by sending a bus dominant for 1.6ms (at 9600 Baud)
 void LinNodeConfig::requestWakeup()
 {

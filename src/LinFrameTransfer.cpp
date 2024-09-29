@@ -16,6 +16,9 @@
     #include <Arduino.h>
 #endif
 
+#include <optional>
+#include <vector>
+
 enum class debugLevel {
     none = 0,
     error,

@@ -15,7 +15,9 @@
 #endif
 
 #include <optional>
+#include <vector>
 #include <unordered_map>
+
 #include "LinTransportLayer.hpp"
 
 class LinNodeConfig : protected LinTransportLayer{

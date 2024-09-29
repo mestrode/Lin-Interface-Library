@@ -18,6 +18,7 @@
 #endif
 
 #include <optional>
+#include <vector>
 
 class LinFrameTransfer : protected HardwareSerial {
 public:

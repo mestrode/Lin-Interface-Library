@@ -15,6 +15,8 @@
     #include <Arduino.h>
 #endif
 
+#include <optional>
+#include <vector>
 #include <unordered_map>
 
 // LIN2.2A Spec Table 3.2

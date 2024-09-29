@@ -15,6 +15,8 @@
 #endif
 
 #include <optional>
+#include <vector>
+
 #include "LinFrameTransfer.hpp"
 
 class LinTransportLayer : protected LinFrameTransfer{
