@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <LinFrameTransfer.hpp>
 
-// using UART 2 for LinBus, UART1 for debug log
-LinFrameTransfer LinBus(2, Serial1);
+// using UART 2 for LinBus, UART 1 for debug log
+LinFrameTransfer LinBus(Serial2, Serial1);
 
 int LIN_ScanIDs()
 {

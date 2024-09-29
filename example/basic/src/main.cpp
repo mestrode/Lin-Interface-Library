@@ -3,8 +3,8 @@
 #include <optional>
 #include <vector>
 
-// using UART 2 for LinBus, UART1 for debug messages
-LinFrameTransfer LinBus(2, Serial1);
+// using UART 2 for LinBus, UART 1 for debug messages
+LinFrameTransfer LinBus(Serial2, Serial1);
 
 // data to be filled by bus request
 float Cap_Max = 0.0;
