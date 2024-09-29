@@ -1,32 +1,28 @@
 #include <unity.h>
 #include "LinNodeConfig.hpp"
+#include "mock_HardwareSerial.h"
 #include "mock_DebugStream.hpp"
 
-
 mock_DebugStream debugStream;
-LinNodeConfig* linNodeConfig;
 
-// overload the + operator on std::vector
-template <typename T>
-std::vector<T> operator+(const std::vector<T>& v1, const std::vector<T>& v2) {
-    // copy of the first vector
-    std::vector<T> result(v1);
-    // append on the second
-    result.insert(result.end(), v2.begin(), v2.end());
-    return result;
-}
+mock_HardwareSerial* linDriver;
+LinNodeConfig* linNodeConfig;
 
 void setUp()
 {
-    linNodeConfig = new LinNodeConfig(0, debugStream, 1);
-    linNodeConfig->mock_loopback = true;
-    linNodeConfig->begin();
+    linDriver = new mock_HardwareSerial(0);
+    linDriver->mock_loopback = true;
+    linDriver->begin(19200, SERIAL_8N1);
+
+    linNodeConfig = new LinNodeConfig(*linDriver, debugStream, 1);
 }
 
 void tearDown()
 {
-    linNodeConfig->end();
     delete linNodeConfig;
+
+    linDriver->end();
+    delete linDriver;
 }
 
 void test_lin_wakeup() {
@@ -38,10 +34,8 @@ void test_lin_wakeup() {
 
     linNodeConfig->requestWakeup();
 
-    std::vector<uint8_t>* txBuffer = &linNodeConfig->txBuffer;
-
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), txBuffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), txBuffer->data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_sleep() {
@@ -56,10 +50,8 @@ void test_lin_sleep() {
 
     linNodeConfig->requestGoToSleep();
 
-    std::vector<uint8_t>* txBuffer = &linNodeConfig->txBuffer;
-
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), txBuffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), txBuffer->data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_getID() {
@@ -99,10 +91,10 @@ void test_lin_getID() {
             0xe1 // Frame Checksum
         };
     } response;
-    linNodeConfig->mock_Input(response.head);
-    linNodeConfig->mock_Input(response.payload);
+    linDriver->mock_Input(response.head);
+    linDriver->mock_Input(response.payload);
     // no fillbytes required
-    linNodeConfig->mock_Input(response.checksum);
+    linDriver->mock_Input(response.checksum);
 
     bool result = linNodeConfig->readProductId(&NAD, &supplierId, &functionId, &variant);
 
@@ -111,10 +103,8 @@ void test_lin_getID() {
     TEST_ASSERT_EQUAL(0x1080, functionId);
     TEST_ASSERT_EQUAL(0x56, variant);
 
-    std::vector<uint8_t>* txBuffer = &linNodeConfig->txBuffer;
-
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), txBuffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), txBuffer->data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_assignNAD_ok()
@@ -157,19 +147,17 @@ void test_lin_assignNAD_ok()
             0x04 // Frame Checksum
         };
     } response;
-    linNodeConfig->mock_Input(response.head);
-    linNodeConfig->mock_Input(response.payload);
-    linNodeConfig->mock_Input(response.payload_fillbytes);
-    linNodeConfig->mock_Input(response.checksum);
+    linDriver->mock_Input(response.head);
+    linDriver->mock_Input(response.payload);
+    linDriver->mock_Input(response.payload_fillbytes);
+    linDriver->mock_Input(response.checksum);
 
     bool result = linNodeConfig->assignNAD(&NAD, &supplierId, &functionId, newNAD);
 
     TEST_ASSERT_EQUAL(oldNAD, NAD);  // <-- answer will follow on oldNAD
 
-    std::vector<uint8_t>* txBuffer = &linNodeConfig->txBuffer;
-
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), txBuffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), txBuffer->data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_conditionalChangeNAD_ok()
@@ -215,19 +203,17 @@ void test_lin_conditionalChangeNAD_ok()
             0xEF // Frame Checksum
         };
     } response;
-    linNodeConfig->mock_Input(response.head);
-    linNodeConfig->mock_Input(response.payload);
-    linNodeConfig->mock_Input(response.payload_fillbytes);
-    linNodeConfig->mock_Input(response.checksum);
+    linDriver->mock_Input(response.head);
+    linDriver->mock_Input(response.payload);
+    linDriver->mock_Input(response.payload_fillbytes);
+    linDriver->mock_Input(response.checksum);
 
     bool result = linNodeConfig->conditionalChangeNAD(&NAD, id, byte, invert, mask, newNAD);
 
     TEST_ASSERT_EQUAL(newNAD, NAD);  // <-- answer will follow on newNAD
 
-    std::vector<uint8_t>* txBuffer = &linNodeConfig->txBuffer;
-
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), txBuffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), txBuffer->data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_saveConfig_ok()
@@ -265,19 +251,17 @@ void test_lin_saveConfig_ok()
             0xA1 // Frame Checksum
         };
     } response;
-    linNodeConfig->mock_Input(response.head);
-    linNodeConfig->mock_Input(response.payload);
-    linNodeConfig->mock_Input(response.payload_fillbytes);
-    linNodeConfig->mock_Input(response.checksum);
+    linDriver->mock_Input(response.head);
+    linDriver->mock_Input(response.payload);
+    linDriver->mock_Input(response.payload_fillbytes);
+    linDriver->mock_Input(response.checksum);
 
     bool result = linNodeConfig->saveConfig(&NAD);
 
     TEST_ASSERT_EQUAL(NAD_response, NAD);  // <-- answer will follow on oldNAD
 
-    std::vector<uint8_t>* txBuffer = &linNodeConfig->txBuffer;
-
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), txBuffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), txBuffer->data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_AssignFrameIdRange_ok()
@@ -324,19 +308,17 @@ void test_lin_AssignFrameIdRange_ok()
             0xA0 // Frame Checksum
         };
     } response;
-    linNodeConfig->mock_Input(response.head);
-    linNodeConfig->mock_Input(response.payload);
-    linNodeConfig->mock_Input(response.payload_fillbytes);
-    linNodeConfig->mock_Input(response.checksum);
+    linDriver->mock_Input(response.head);
+    linDriver->mock_Input(response.payload);
+    linDriver->mock_Input(response.payload_fillbytes);
+    linDriver->mock_Input(response.checksum);
 
     bool result = linNodeConfig->assignFrameIdRange(&NAD, start, PID0, PID1, PID2, PID3);
 
     TEST_ASSERT_EQUAL(NAD_response, NAD);  // <-- answer will follow on oldNAD
 
-    std::vector<uint8_t>* txBuffer = &linNodeConfig->txBuffer;
-
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), txBuffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), txBuffer->data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 int main() {

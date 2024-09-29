@@ -181,17 +181,6 @@ public:
 
 // ------------------------------------
 
-/// open UART for transmission
-void LinFrameTransfer::begin()
-{
-    if (rxPin < 0 && txPin < 0) {
-        // no custom pins are defined
-        HardwareSerial::begin(baud, SERIAL_8N1);
-    } else {
-        HardwareSerial::begin(baud, SERIAL_8N1, rxPin, txPin);
-    }
-}
-
 /// @brief write a LIN2.0 frame to the lin-bus. no request for any node response on the bus.
 /// @details write LIN Frame (Break, Synk, PID, Data, Checksum) to the Bus, and hope some node will recognize this
 /// - Checksum Calculations regarding LIN 2.x
@@ -210,14 +199,14 @@ bool LinFrameTransfer::writeFrame(const uint8_t frameID, const std::vector<uint8
     // TX Full Frame
     writeFrameHead(protectedID);
     for (const uint8_t& byte : data) {
-        write(byte);
+        driver.write(byte);
     }
 
     uint8_t chksum = getChecksumLin2x(protectedID, data);
-    write(chksum);
+    driver.write(chksum);
 
     // ensure request is avaliable for receiver
-    flush();
+    driver.flush();
 
     // Do readback written bytes and verify
     if constexpr (writeReadback_verify) {
@@ -245,7 +234,7 @@ bool LinFrameTransfer::writeFrame(const uint8_t frameID, const std::vector<uint8
         // remove bytes from buffer (head + data + checksum)
         int frameBytes = 3 + data.size() + 1;
         for (auto i=0; i<frameBytes; ++i) {
-            read();
+            driver.read();
         }
     }
 
@@ -262,7 +251,7 @@ bool LinFrameTransfer::writeEmptyFrame(const uint8_t frameID)
     // no checksum
 
     // ensure request is avaliable for receiver
-    flush();
+    driver.flush();
 
     // Do readback written bytes and verify
     if constexpr (writeReadback_verify)
@@ -282,7 +271,7 @@ bool LinFrameTransfer::writeEmptyFrame(const uint8_t frameID)
         // remove bytes from buffer (head + data + checksum)
         int frameBytes = 3;
         for (auto i=0; i<frameBytes; ++i) {
-            read();
+            driver.read();
         }
     }
 
@@ -304,7 +293,7 @@ std::optional<std::vector<uint8_t>> LinFrameTransfer::readFrame(const uint8_t fr
     writeFrameHead(protectedID);
 
     // ensure request is avaliable for receiver
-    flush();
+    driver.flush();
 
     // RX loopback of our TX AND response from receiver
     auto result = receiveFrameExtractData(protectedID, expectedDataLength);
@@ -315,8 +304,8 @@ std::optional<std::vector<uint8_t>> LinFrameTransfer::readFrame(const uint8_t fr
 void LinFrameTransfer::writeFrameHead(uint8_t protectedID)
 {
     writeBreak();
-    write(SYNC_FIELD);
-    write(protectedID);
+    driver.write(SYNC_FIELD);
+    driver.write(protectedID);
 }
 
 /// @brief Send a Break for introduction of a Frame
@@ -326,16 +315,16 @@ size_t LinFrameTransfer::writeBreak()
     // Goal: Brake Length (dominant + delimiter) = min 14 Tbit (see 2.8.1)
     // This is done by sending a Byte (0x00) + Stop Bit by using half baud rate
 
-    flush();
+    driver.flush();
     // configure to half baudrate --> a t_bit will be doubled
-    updateBaudRate(baud >> 1);
+    driver.updateBaudRate(baud >> 1);
     // write 0x00, including Stop-Bit (=1),
     // qualifies when writing in slow motion like a Break in normal speed
-    size_t result = write(BREAK_FIELD);
+    size_t result = driver.write(BREAK_FIELD);
     // ensure this was send
-    flush();
+    driver.flush();
     // restore normal speed
-    updateBaudRate(baud);
+    driver.updateBaudRate(baud);
     return result;
 }
 
@@ -368,13 +357,13 @@ std::optional<std::vector<uint8_t>> LinFrameTransfer::receiveFrameExtractData(ui
     while ((millis() < timeout_stop) && (!frameReader.isFinish()))
     {
         // ensure timeout is checked, while no data are avaliable
-        if (!available())
+        if (!driver.available())
         {
             continue;
         }
 
         // get byte, verify and use (or may discard)
-        uint8_t newByte = read();
+        uint8_t newByte = driver.read();
         frameReader.processByte(newByte);
     }
 
@@ -402,13 +391,13 @@ bool LinFrameTransfer::receiveFrameHead(uint8_t protectedID)
     while ((millis() < timeout_stop) && (!frameReader.hasHead()))
     {
         // ensure timeout is checked, while no data are avaliable
-        if (!available())
+        if (!driver.available())
         {
             continue;
         }
 
         // get byte, verify and use (or may discard)
-        uint8_t newByte = read();
+        uint8_t newByte = driver.read();
         frameReader.processByte(newByte);
     }
 

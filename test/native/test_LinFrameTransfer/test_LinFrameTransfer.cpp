@@ -1,22 +1,28 @@
 #include <unity.h>
 #include "LinFrameTransfer.hpp"
+#include "mock_HardwareSerial.h"
 #include "mock_DebugStream.hpp"
 
-mock_DebugStream mockDebugStream;
+mock_DebugStream debugStream;
 
-LinFrameTransfer *linFrameTransfer;
+mock_HardwareSerial* linDriver;
+LinFrameTransfer* linFrameTransfer;
 
 void setUp()
 {
-    linFrameTransfer = new LinFrameTransfer(0, mockDebugStream, 1);
-    linFrameTransfer->mock_loopback = true;
-    linFrameTransfer->begin();
+    linDriver = new mock_HardwareSerial(0);
+    linDriver->mock_loopback = true;
+    linDriver->begin(19200, SERIAL_8N1);
+
+    linFrameTransfer = new LinFrameTransfer(*linDriver, debugStream, 2);
 }
 
 void tearDown()
 {
-    linFrameTransfer->end();
     delete linFrameTransfer;
+
+    linDriver->end();
+    delete linDriver;
 }
 
 void test_lin_writeFrame_Ok()
@@ -58,8 +64,8 @@ void test_lin_writeFrame_Ok()
 
     TEST_ASSERT_TRUE(result); // success
 
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), linFrameTransfer->txBuffer.size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linFrameTransfer->txBuffer.data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_writeFrame_Write_Failed()
@@ -109,15 +115,15 @@ void test_lin_writeFrame_Write_Failed()
         0x8B  // Checksum
     };
 
-    linFrameTransfer->mock_loopback = false;
-    linFrameTransfer->mock_Input(bus_received);
+    linDriver->mock_loopback = false;
+    linDriver->mock_Input(bus_received);
 
     bool result = linFrameTransfer->writeFrame(FrameID, request);
 
     TEST_ASSERT_FALSE(result); // Fail
 
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), linFrameTransfer->txBuffer.size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linFrameTransfer->txBuffer.data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_writeFrame_Empty()
@@ -138,8 +144,8 @@ void test_lin_writeFrame_Empty()
 
     TEST_ASSERT_TRUE(result); // success for empty frame
 
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), linFrameTransfer->txBuffer.size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linFrameTransfer->txBuffer.data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_writeFrame_MaxData()
@@ -167,8 +173,8 @@ void test_lin_writeFrame_MaxData()
 
     TEST_ASSERT_TRUE(result); // success for maximum data frame
 
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), linFrameTransfer->txBuffer.size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linFrameTransfer->txBuffer.data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_writeFrame_RepeatTransmission()
@@ -193,10 +199,10 @@ void test_lin_writeFrame_RepeatTransmission()
 
         TEST_ASSERT_TRUE(result); // success for each transmission
 
-        TEST_ASSERT_EQUAL(bus_transmitted.size(), linFrameTransfer->txBuffer.size());
-        TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linFrameTransfer->txBuffer.data(), bus_transmitted.size());
+        TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+        TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 
-        linFrameTransfer->txBuffer.clear();
+        linDriver->txBuffer.clear();
     }
 }
 
@@ -229,8 +235,8 @@ void test_lin_readFrame_Ok()
         uint8_t checksum = 0x17;
     } bus_received;
 
-    linFrameTransfer->mock_Input(bus_received.data);
-    linFrameTransfer->mock_Input(bus_received.checksum);
+    linDriver->mock_Input(bus_received.data);
+    linDriver->mock_Input(bus_received.checksum);
 
     auto result = linFrameTransfer->readFrame(FrameID, requested_bytes);
 
@@ -238,8 +244,8 @@ void test_lin_readFrame_Ok()
     TEST_ASSERT_EQUAL(bus_received.data.size(), result.value().size());
     TEST_ASSERT_EQUAL_MEMORY(bus_received.data.data(), result.value().data(), bus_received.data.size());
 
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), linFrameTransfer->txBuffer.size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linFrameTransfer->txBuffer.data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_readFrame_Checksum_Failed()
@@ -272,15 +278,15 @@ void test_lin_readFrame_Checksum_Failed()
         uint8_t checksum = 0x00;
     } response;
 
-    linFrameTransfer->mock_Input(response.data);
-    linFrameTransfer->mock_Input(response.checksum);
+    linDriver->mock_Input(response.data);
+    linDriver->mock_Input(response.checksum);
 
     auto result = linFrameTransfer->readFrame(FrameID, response.data.size());
 
     TEST_ASSERT_FALSE(result.has_value());
 
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), linFrameTransfer->txBuffer.size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linFrameTransfer->txBuffer.data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_readFrame_FrameShort()
@@ -311,15 +317,15 @@ void test_lin_readFrame_FrameShort()
         uint8_t checksum = 0x1F;
     } response;
 
-    linFrameTransfer->mock_Input(response.data);
-    linFrameTransfer->mock_Input(response.checksum);
+    linDriver->mock_Input(response.data);
+    linDriver->mock_Input(response.checksum);
 
     auto result = linFrameTransfer->readFrame(FrameID, requested_bytes);
 
     TEST_ASSERT_FALSE(result.has_value());
 
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), linFrameTransfer->txBuffer.size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linFrameTransfer->txBuffer.data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 void test_lin_readFrame_BusTimeout()
@@ -336,14 +342,14 @@ void test_lin_readFrame_BusTimeout()
     };
 
     // Simulating no data input (bus timeout)
-    linFrameTransfer->mock_Input({}); // No data response
+    linDriver->mock_Input({}); // No data response
 
     auto result = linFrameTransfer->readFrame(FrameID, requested_bytes);
 
     TEST_ASSERT_FALSE(result.has_value()); // timeout, no response
 
-    TEST_ASSERT_EQUAL(bus_transmitted.size(), linFrameTransfer->txBuffer.size());
-    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linFrameTransfer->txBuffer.data(), bus_transmitted.size());
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
 int main()

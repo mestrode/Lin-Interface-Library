@@ -20,7 +20,7 @@
 #include <optional>
 #include <vector>
 
-class LinFrameTransfer : protected HardwareSerial {
+class LinFrameTransfer {
 public:
     // Do readback written bytes and verify
     static constexpr bool writeReadback_verify = true;
@@ -40,11 +40,13 @@ public:
     };
 
 
-    LinFrameTransfer(uint8_t uart_nr, Stream &debug, int verbose = -1):
-        HardwareSerial(uart_nr),
+    LinFrameTransfer(HardwareSerial &driverStream, Stream &debug, int verbose = -1):
+        driver(driverStream),
         debugStream(debug),
         verboseLevel(verbose)
     {}
+
+    HardwareSerial &driver;
 
     int verboseLevel;
     Stream &debugStream;
@@ -53,27 +55,12 @@ public:
     int8_t rxPin = -1;
     int8_t txPin = -1;
 
-    void begin();
-    using HardwareSerial::end;
-
     bool writeFrame(const uint8_t frameID, const std::vector<uint8_t>& data);
     bool writeEmptyFrame(const uint8_t frameID);
 
-    using HardwareSerial::available;
     std::optional<std::vector<uint8_t>> readFrame(const uint8_t frameID, uint8_t expectedDataLength = 8);
 
-#ifdef UNIT_TEST
-public:
-    using HardwareSerial::mock_loopback;
-    using HardwareSerial::mock_Input;
-    using HardwareSerial::txBuffer;
-#endif
-
 protected:
-    using HardwareSerial::updateBaudRate;
-    using HardwareSerial::read;
-    using HardwareSerial::flush;
-    using HardwareSerial::write;
 
     inline void writeFrameHead(const uint8_t protectedID);
     inline size_t writeBreak();

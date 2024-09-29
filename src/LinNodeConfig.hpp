@@ -24,9 +24,6 @@ class LinNodeConfig : protected LinTransportLayer{
 public:
     using LinTransportLayer::LinTransportLayer;
 
-    using LinTransportLayer::begin;
-    using LinTransportLayer::end;
-
     void requestWakeup();
     void requestGoToSleep();
 
@@ -43,13 +40,6 @@ public:
     bool saveConfig(uint8_t* NAD);
     
     bool assignFrameIdRange(uint8_t* NAD, uint8_t startIndex, uint8_t PID0, uint8_t PID1, uint8_t PID2, uint8_t PID3);
-
-#ifdef UNIT_TEST
-public:
-    using HardwareSerial::mock_loopback;
-    using HardwareSerial::mock_Input;
-    using HardwareSerial::txBuffer;
-#endif
 
 protected:
     // 3.2.1.4 SID

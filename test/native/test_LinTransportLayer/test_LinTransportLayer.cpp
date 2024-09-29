@@ -1,22 +1,26 @@
 #include <unity.h>
 #include "LinTransportLayer.hpp"
+#include "mock_HardwareSerial.h"
 #include "mock_DebugStream.hpp"
 
-mock_DebugStream mockDebugStream;
+mock_DebugStream debugStream;
 
+mock_HardwareSerial* linDriver;
 LinTransportLayer* linTransportLayer;
 
 void setUp()
 {
-    linTransportLayer = new LinTransportLayer(0, mockDebugStream, 1);
-    linTransportLayer->mock_loopback = true;
-    linTransportLayer->begin();
+    linDriver = new mock_HardwareSerial(0);
+    linDriver->mock_loopback = true;
+    linDriver->begin(19200, SERIAL_8N1);
+    linTransportLayer = new LinTransportLayer(*linDriver, debugStream, 2);
 }
 
 void tearDown()
 {
-    linTransportLayer->end();
     delete linTransportLayer;
+    linDriver->end();
+    delete linDriver;
 }
 
 void test_write_DTL_MasterRequest_SF_SF()
@@ -48,10 +52,10 @@ void test_write_DTL_MasterRequest_SF_SF()
         };
     } response;
 
-    linTransportLayer->mock_Input(response.head);
-    linTransportLayer->mock_Input(response.payload);
+    linDriver->mock_Input(response.head);
+    linDriver->mock_Input(response.payload);
     // no fillbytes required
-    linTransportLayer->mock_Input(response.checksum);
+    linDriver->mock_Input(response.checksum);
 
     auto result = linTransportLayer->writePDU(NAD, request.payload);
 
@@ -75,10 +79,9 @@ void test_write_DTL_MasterRequest_SF_SF()
         0x00, 0x55, 0x7D // Frame Head = Slave Response
         // body send by mock
     };
-    std::vector<uint8_t>* buffer = &linTransportLayer->txBuffer;
 
-    TEST_ASSERT_EQUAL(expectation.size(), buffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(expectation.data(), buffer->data(), expectation.size());
+    TEST_ASSERT_EQUAL(expectation.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(expectation.data(), linDriver->txBuffer.data(), expectation.size());
 }
 
 
@@ -108,10 +111,10 @@ void test_write_DTL_MasterRequest_SF_SF2()
     uint8_t mock_DTL_response_checksum {
         0xD9
     }; // Frame Checksum
-    linTransportLayer->mock_Input(mock_DTL_response_head);
-    linTransportLayer->mock_Input(mock_DTL_response_payload);
-    linTransportLayer->mock_Input(mock_DTL_response_payload_fillbytes);
-    linTransportLayer->mock_Input(mock_DTL_response_checksum);
+    linDriver->mock_Input(mock_DTL_response_head);
+    linDriver->mock_Input(mock_DTL_response_payload);
+    linDriver->mock_Input(mock_DTL_response_payload_fillbytes);
+    linDriver->mock_Input(mock_DTL_response_checksum);
 
     auto result = linTransportLayer->writePDU(NAD, payload);
 
@@ -135,10 +138,8 @@ void test_write_DTL_MasterRequest_SF_SF2()
         0x00, 0x55, 0x7D // Frame Head = Slave Response
         // body send by mock
     };
-    std::vector<uint8_t>* buffer = &linTransportLayer->txBuffer;
-
-    TEST_ASSERT_EQUAL(expectation.size(), buffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(expectation.data(), buffer->data(), expectation.size());
+    TEST_ASSERT_EQUAL(expectation.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(expectation.data(), linDriver->txBuffer.data(), expectation.size());
 }
 
 void test_write_DTL_MasterRequest_SF_MultiFrame()
@@ -177,7 +178,7 @@ void test_write_DTL_MasterRequest_SF_MultiFrame()
         0xFF, 0xFF, 0xFF, // fill bytes
         0x06 // Frame Checksum
     };
-    linTransportLayer->mock_Input(mock_DTL_response);
+    linDriver->mock_Input(mock_DTL_response);
 
     auto result = linTransportLayer->writePDU(NAD, payload);
 
@@ -214,10 +215,9 @@ void test_write_DTL_MasterRequest_SF_MultiFrame()
         0x00, 0x55, 0x7D // Frame Head = Slave Response
         // body send by mock
     };
-    std::vector<uint8_t>* buffer = &linTransportLayer->txBuffer;
 
-    TEST_ASSERT_EQUAL(expectation.size(), buffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(expectation.data(), buffer->data(), expectation.size());
+    TEST_ASSERT_EQUAL(expectation.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(expectation.data(), linDriver->txBuffer.data(), expectation.size());
 }
 
 void test_write_DTL_MasterRequest_MultiFrame_SF()
@@ -248,10 +248,10 @@ void test_write_DTL_MasterRequest_MultiFrame_SF()
     uint8_t mock_DTL_response_checksum {
         0x52 // Frame Checksum
     }; 
-    linTransportLayer->mock_Input(mock_DTL_response_head);
-    linTransportLayer->mock_Input(mock_DTL_response_payload);
-    linTransportLayer->mock_Input(mock_DTL_response_payload_fillbytes);
-    linTransportLayer->mock_Input(mock_DTL_response_checksum);
+    linDriver->mock_Input(mock_DTL_response_head);
+    linDriver->mock_Input(mock_DTL_response_payload);
+    linDriver->mock_Input(mock_DTL_response_payload_fillbytes);
+    linDriver->mock_Input(mock_DTL_response_checksum);
 
     auto result = linTransportLayer->writePDU(NAD, payload);
 
@@ -290,10 +290,9 @@ void test_write_DTL_MasterRequest_MultiFrame_SF()
         0x00, 0x55, 0x7D, // Frame Head 
         // body send by mock
     };
-    std::vector<uint8_t>* buffer = &linTransportLayer->txBuffer;
 
-    TEST_ASSERT_EQUAL(expectation.size(), buffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(expectation.data(), buffer->data(), expectation.size());
+    TEST_ASSERT_EQUAL(expectation.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(expectation.data(), linDriver->txBuffer.data(), expectation.size());
 }
 
 
@@ -343,7 +342,7 @@ void test_write_DTL_MasterRequest_MultiFrame_MultiFrame()
         0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6 // payload
     };
 
-    linTransportLayer->mock_Input(response.mock_DTLs);
+    linDriver->mock_Input(response.mock_DTLs);
 
     auto result = linTransportLayer->writePDU(NAD, request.payload);
 
@@ -382,10 +381,9 @@ void test_write_DTL_MasterRequest_MultiFrame_MultiFrame()
         0x00, 0x55, 0x7D // Frame Head 
         // body send by mock
     };
-    std::vector<uint8_t>* buffer = &linTransportLayer->txBuffer;
 
-    TEST_ASSERT_EQUAL(expectation.size(), buffer->size());
-    TEST_ASSERT_EQUAL_MEMORY(expectation.data(), buffer->data(), expectation.size());
+    TEST_ASSERT_EQUAL(expectation.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(expectation.data(), linDriver->txBuffer.data(), expectation.size());
 }
 
 int main() {

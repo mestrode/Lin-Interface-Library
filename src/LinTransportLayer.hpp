@@ -23,17 +23,7 @@ class LinTransportLayer : protected LinFrameTransfer{
 public:
     using LinFrameTransfer::LinFrameTransfer;
 
-    using LinFrameTransfer::begin;
-    using LinFrameTransfer::end;
-
     std::optional<std::vector<uint8_t>> writePDU(uint8_t* NAD, const std::vector<uint8_t>& payload, const uint8_t newNAD = 0);
-
-#ifdef UNIT_TEST
-public:
-    using LinFrameTransfer::mock_loopback;
-    using LinFrameTransfer::mock_Input;
-    using LinFrameTransfer::txBuffer;
-#endif
 
 protected:
     // Packet Data Unit (PDU)
