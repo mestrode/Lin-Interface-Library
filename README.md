@@ -86,6 +86,10 @@ See description of Frame 0x3C and 0x3D in the doc folder of this project.
 
 Don't know if this is valid in general, but at least in the Project IBS-Sensor-Library it worked.
 
+# Compiler Flags
+
+Remember that we use gnu++17 in the compiler flags
+
 # See also
 LIN Specification 2.2A provides by lin-cia.org
 https://www.lin-cia.org/fileadmin/microsites/lin-cia.org/resources/documents/LIN_2.2A.pdf
