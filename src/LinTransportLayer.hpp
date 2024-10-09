@@ -122,15 +122,15 @@ protected:
     };
 
     std::vector<std::vector<uint8_t>> framesetFromPayload(const uint8_t *NAD, const std::vector<uint8_t> &payload);
-    inline void fillSingleFrame(LinTransportLayer::PDU::SingleFrame *singleFrame, const uint8_t *NAD, const std::vector<uint8_t> &payload);
-    inline void fillFirstFrame(LinTransportLayer::PDU::FirstFrame *firstFrame, const uint8_t *NAD, const std::vector<uint8_t> &payload, int &bytesWritten);
-    inline void fillConsecutiveFrame(LinTransportLayer::PDU::ConsecutiveFrame *consecutiveFrame, const uint8_t *NAD, const uint8_t sequenceNumber, const std::vector<uint8_t> &payload, int &bytesWritten);
+    inline void fillSingleFrame(LinTransportLayer::PDU::SingleFrame& singleFrame, const uint8_t *NAD, const std::vector<uint8_t> &payload);
+    inline void fillFirstFrame(LinTransportLayer::PDU::FirstFrame& firstFrame, const uint8_t *NAD, const std::vector<uint8_t> &payload, int &bytesWritten);
+    inline void fillConsecutiveFrame(LinTransportLayer::PDU::ConsecutiveFrame& consecutiveFrame, const uint8_t *NAD, const uint8_t sequenceNumber, const std::vector<uint8_t> &payload, int &bytesWritten);
 
 private:
     std::optional<std::vector<uint8_t>> readPduResponse(uint8_t *NAD, const uint8_t newNAD = 0);
-    void readSingleFrame(PDU::SingleFrame* singleFrame, std::vector<uint8_t> &payload);
-    bool readFirstFrame(PDU::FirstFrame* firstFrame, std::vector<uint8_t> &payload, size_t &announcedBytes);
-    bool readConsecutiveFrame(PDU::ConsecutiveFrame* consecutiveFrame, std::vector<uint8_t> &payload, size_t &announcedBytes, int frameCounter);
+    void readSingleFrame(PDU::SingleFrame &singleFrame, std::vector<uint8_t> &payload);
+    bool readFirstFrame(PDU::FirstFrame &firstFrame, std::vector<uint8_t> &payload, size_t &announcedBytes);
+    bool readConsecutiveFrame(PDU::ConsecutiveFrame &consecutiveFrame, std::vector<uint8_t> &payload, size_t &announcedBytes, int frameCounter);
 
     static_assert(offsetof(PDU::SingleFrame, PCI_LEN) == offsetof(PDU::FirstFrame, PCI_LEN256),
         "Data position of SingleFrame::PCI_LEN does not match FirstFrame::PCI_LEN256");
