@@ -95,9 +95,7 @@ void LinTransportLayer::fillSingleFrame(
     singleFrame->NAD = *NAD;
 
     std::size_t len = payload.size();
-    // High Nibble: SingleFrame
-    // Low Nibble : LEN (= max 6)
-    singleFrame->PCI_LEN = PDU::PCI::SF_Type | static_cast<uint8_t>(len & 0xFF);
+    singleFrame->setLen(len);
 
     // Data [0..n]
     std::copy(
@@ -127,10 +125,7 @@ void LinTransportLayer::fillFirstFrame(
     firstFrame->NAD = *NAD;
 
     std::size_t len = payload.size();
-    // High Nibble: FirstFrame
-    // Low Nibble: LEN / 256
-    firstFrame->PCI_LEN256 = PDU::PCI::FF_Type | static_cast<uint8_t>(len >> 8);
-    firstFrame->LEN = static_cast<uint8_t>(len & 0xFF);
+    firstFrame->setLen(len);
 
     // Data [0..n]
     std::copy(
@@ -151,9 +146,7 @@ void LinTransportLayer::fillConsecutiveFrame(
 ){
     // NAD
     consecutiveFrame->NAD = *NAD;
-    // High Nibble: Consguetive Frame
-    // Low Nibble: Framecounter % 0x0F
-    consecutiveFrame->PCI_SN = PDU::PCI::CF_Type | (sequenceNumber & PDU::MASK_PCI_SN);
+    consecutiveFrame->setSequenceNumber(sequenceNumber);
     // Data [0..n]
     auto bytesToCopy = std::min(sizeof(PDU::ConsecutiveFrame::data), payload.size() - bytesWritten);
     std::copy(
@@ -210,7 +203,7 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t* 
         // treat as SingleFrame to get FrameType
         PDU::SingleFrame* singleFrame = reinterpret_cast<PDU::SingleFrame*>(rxFrame->data());
         uint8_t rxNAD = singleFrame->NAD;
-        uint8_t frameType = singleFrame->PCI_LEN & PDU::MASK_PCI_TYPE;
+        uint8_t frameType = singleFrame->getType();
 
         if (frameCounter == isSingleFrame_or_isFirstFrame)
         {
@@ -299,7 +292,7 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t* 
 
 void LinTransportLayer::readSingleFrame(PDU::SingleFrame* singleFrame, std::vector<uint8_t> &payload)
 {
-    size_t announcedBytes = (singleFrame->PCI_LEN & PDU::MASK_PCI_LEN);
+    size_t announcedBytes = singleFrame->getLen();
     // STRICT: when announcedBytes is greater than 6 bytes, frame shall be ignored
     // however, single frame is limited to 6 data bytes...
 
@@ -312,7 +305,7 @@ void LinTransportLayer::readSingleFrame(PDU::SingleFrame* singleFrame, std::vect
 
 bool LinTransportLayer::readFirstFrame(PDU::FirstFrame* firstFrame, std::vector<uint8_t> &payload, size_t &announcedBytes)
 {
-    announcedBytes = ((firstFrame->PCI_LEN256 & PDU::MASK_PCI_LEN) << 8) | firstFrame->LEN;
+    announcedBytes = firstFrame->getLen();
     if (announcedBytes < 7) {
         // STRICT: when announcedBytes is less than 7 bytes, frame shall be ignored
         return false;
@@ -333,7 +326,7 @@ bool LinTransportLayer::readFirstFrame(PDU::FirstFrame* firstFrame, std::vector<
 bool LinTransportLayer::readConsecutiveFrame(PDU::ConsecutiveFrame* consecutiveFrame, std::vector<uint8_t> &payload, size_t &announcedBytes, int frameCounter)
 {
     auto expectedSequenceNumber = frameCounter & PDU::MASK_PCI_SN;
-    auto rxSequenceNumber = consecutiveFrame->PCI_SN & PDU::MASK_PCI_SN;
+    auto rxSequenceNumber = consecutiveFrame->getSequenceNumber();
     if (expectedSequenceNumber != rxSequenceNumber) {
         // STRICT: unexpected sequence number received --> abort
         return false;

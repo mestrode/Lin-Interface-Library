@@ -42,11 +42,11 @@ protected:
 
     // 3.2.1.3 PCI
     // 4.2.3.3 PCI = Protocol Control Information (= Length of Message)
-        enum PCI : uint8_t {
-            MASK_PCI_TYPE = 0xF0,
-            MASK_PCI_LEN = 0x0F, // SF and FF
-            MASK_PCI_SN = 0x0F, // CF
+        static constexpr uint8_t MASK_PCI_TYPE = 0xF0;
+        static constexpr uint8_t MASK_PCI_LEN = 0x0F; // SF and FF
+        static constexpr uint8_t MASK_PCI_SN = 0x0F; // CF
 
+        enum PCI : uint8_t {
             SF_Type = 0x00,
             FF_Type = 0x10,
             CF_Type = 0x20,
@@ -59,6 +59,23 @@ protected:
             uint8_t PCI_LEN {SF_Type}; // B7..B4 = type (SF=0, FF=1, CF=2)
                                        // B3..B0 = LEN of data bytes
             uint8_t data[6] {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+            inline PCI getType()
+            {
+                return static_cast<PCI>(PCI_LEN & PDU::MASK_PCI_TYPE);
+            }
+
+            inline void setLen(std::size_t len)
+            {
+                // High Nibble: SingleFrame
+                // Low Nibble : LEN (= max 6)
+                PCI_LEN = PDU::PCI::SF_Type | static_cast<uint8_t>(len & 0xFF);
+            }
+
+            inline std::size_t getLen()
+            {
+                return PCI_LEN & PDU::MASK_PCI_LEN;
+            }
         };
 
         // First Frame, when payload does not fit into a single PDU, followed by Consecutive Frames
@@ -68,6 +85,19 @@ protected:
                                           // B3..B0 = LEN/256 of databytes
             uint8_t LEN {0xFF}; // LEN & 0xFF of data bytes
             uint8_t data[5] {0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+            inline void setLen(std::size_t len)
+            {
+                // High Nibble: FirstFrame
+                // Low Nibble: LEN / 256
+                PCI_LEN256 = PDU::PCI::FF_Type | static_cast<uint8_t>(len >> 8);
+                LEN = static_cast<uint8_t>(len & 0xFF);
+            }
+
+            inline std::size_t getLen()
+            {
+                return ((PCI_LEN256 & PDU::MASK_PCI_LEN) << 8) | LEN;
+            }
         };
 
         // Consecutive Frames follows on FF, when payload does not fit into a single PDU
@@ -76,6 +106,18 @@ protected:
             uint8_t PCI_SN {CF_Type}; // B7..B4 = type (SF=0, FF=1, CF=2)
                                       // B3..B0 = Frame Counter % 0x0F (wraps around)
             uint8_t data[6] {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+            inline void setSequenceNumber(int sequenceNumber)
+            {
+                // High Nibble: Consguetive Frame
+                // Low Nibble: Framecounter % 0x0F
+                PCI_SN = PDU::PCI::CF_Type | (sequenceNumber & PDU::MASK_PCI_SN);
+            }
+
+            inline int getSequenceNumber()
+            {
+                return PCI_SN & PDU::MASK_PCI_SN;
+            }
         };
     };
 
@@ -89,4 +131,9 @@ private:
     void readSingleFrame(PDU::SingleFrame* singleFrame, std::vector<uint8_t> &payload);
     bool readFirstFrame(PDU::FirstFrame* firstFrame, std::vector<uint8_t> &payload, size_t &announcedBytes);
     bool readConsecutiveFrame(PDU::ConsecutiveFrame* consecutiveFrame, std::vector<uint8_t> &payload, size_t &announcedBytes, int frameCounter);
+
+    static_assert(offsetof(PDU::SingleFrame, PCI_LEN) == offsetof(PDU::FirstFrame, PCI_LEN256),
+        "Data position of SingleFrame::PCI_LEN does not match FirstFrame::PCI_LEN256");
+    static_assert(offsetof(PDU::SingleFrame, PCI_LEN) == offsetof(PDU::ConsecutiveFrame, PCI_SN),
+        "Data position of SingleFrame::PCI_LEN does not match PDU::ConsecutiveFrame::PCI_SN");
 };
