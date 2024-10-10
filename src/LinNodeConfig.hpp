@@ -27,19 +27,19 @@ public:
     void requestWakeup();
     void requestGoToSleep();
 
-    std::optional<std::vector<uint8_t>> readById(uint8_t* NAD, uint16_t supplierId, uint16_t functionId, uint8_t id);
-    bool readProductId(uint8_t* NAD, uint16_t* supplierId, uint16_t* functionId, uint8_t* variantId);
-    bool readSerialNumber(uint8_t* NAD, uint16_t* supplierId, uint16_t* functionId, uint32_t* serialNumber);
+    std::optional<std::vector<uint8_t>> readById(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint8_t id);
+    bool readProductId(uint8_t &NAD, uint16_t &supplierId, uint16_t &functionId, uint8_t &variantId);
+    bool readSerialNumber(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint32_t &serialNumber);
 
-    bool assignNAD(uint8_t* NAD, uint16_t* supplierId, uint16_t* functionId, uint8_t newNAD);
-    bool conditionalChangeNAD(uint8_t* NAD, uint8_t id, uint8_t byte, uint8_t invert, uint8_t mask, uint8_t newNAD);
+    bool assignNAD(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint8_t newNAD);
+    bool conditionalChangeNAD(uint8_t &NAD, uint8_t id, uint8_t byte, uint8_t invert, uint8_t mask, uint8_t newNAD);
 
     // not implemented:
     // std::vector<uint8_t> LinNodeConfig::dataDump(uint8_t* NAD, std::vector<uint8_t>)
 
-    bool saveConfig(uint8_t* NAD);
+    bool saveConfig(uint8_t &NAD);
     
-    bool assignFrameIdRange(uint8_t* NAD, uint8_t startIndex, uint8_t PID0, uint8_t PID1, uint8_t PID2, uint8_t PID3);
+    bool assignFrameIdRange(uint8_t &NAD, uint8_t startIndex, uint8_t PID0, uint8_t PID1, uint8_t PID2, uint8_t PID3);
 
 protected:
     // 3.2.1.4 SID

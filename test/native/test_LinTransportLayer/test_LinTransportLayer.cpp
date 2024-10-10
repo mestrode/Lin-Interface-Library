@@ -29,7 +29,7 @@ void test_write_DTL_MasterRequest_SF_SF()
 
     // Master Request
     uint8_t NAD_value = 0x0A;
-    uint8_t* NAD = &NAD_value;
+    uint8_t NAD = NAD_value;
     struct Request
     {
         std::vector<uint8_t> payload = {
@@ -91,7 +91,7 @@ void test_write_DTL_MasterRequest_SF_SF2()
 
     // Master Request
     uint8_t NAD_value = 0x0A;
-    uint8_t* NAD = &NAD_value;
+    uint8_t NAD = NAD_value;
     std::vector<uint8_t> payload = {
         0x22, // SID
         0x06, 0x2E, 0x87, 0x47, 0x41 // real payload
@@ -148,7 +148,7 @@ void test_write_DTL_MasterRequest_SF_MultiFrame()
 
     // Master Request
     uint8_t NAD_value = 0x7F; // Wildcard
-    uint8_t* NAD = &NAD_value;
+    uint8_t NAD = NAD_value;
     std::vector<uint8_t> payload = {
         0x22, // SID
         0x06, 0x5E // real payload
@@ -190,7 +190,7 @@ void test_write_DTL_MasterRequest_SF_MultiFrame()
     };
 
     TEST_ASSERT_TRUE(result.has_value());
-    TEST_ASSERT_EQUAL(0x0A, NAD_value);
+    TEST_ASSERT_EQUAL(0x0A, NAD);
 
     TEST_ASSERT_EQUAL(mock_payload.size(), result.value().size());
     TEST_ASSERT_EQUAL_MEMORY(mock_payload.data(), result.value().data(), mock_payload.size());
@@ -227,7 +227,7 @@ void test_write_DTL_MasterRequest_MultiFrame_SF()
 
     // Master Request
     uint8_t NAD_value = 0x7F; // Wildcard
-    uint8_t* NAD = &NAD_value;
+    uint8_t NAD = NAD_value;
     std::vector<uint8_t> payload = {
         0x62, 0x06, 0x5E, '3', 'C',
         '8', '9', '5', '9', '5', '3',
@@ -260,7 +260,7 @@ void test_write_DTL_MasterRequest_MultiFrame_SF()
     };
 
     TEST_ASSERT_TRUE(result.has_value());
-    TEST_ASSERT_EQUAL(0x0A, NAD_value);
+    TEST_ASSERT_EQUAL(0x0A, NAD);
 
     TEST_ASSERT_EQUAL(mock_DTL_response_payload.size(), result.value().size());
     TEST_ASSERT_EQUAL_MEMORY(mock_DTL_response_payload.data(), result.value().data(), mock_DTL_response_payload.size());
@@ -302,7 +302,7 @@ void test_write_DTL_MasterRequest_MultiFrame_MultiFrame()
     std::cout << "fillbytes: no + no" << std::endl;
 
     uint8_t NAD_value = 0x7F; // wildcard
-    uint8_t* NAD = &NAD_value;
+    uint8_t NAD = NAD_value;
 
     // Master Request
     struct Request {
@@ -347,7 +347,7 @@ void test_write_DTL_MasterRequest_MultiFrame_MultiFrame()
     auto result = linTransportLayer->writePDU(NAD, request.payload);
 
     TEST_ASSERT_TRUE(result.has_value());
-    TEST_ASSERT_EQUAL(NAD_slave, NAD_value);
+    TEST_ASSERT_EQUAL(NAD_slave, NAD);
 
     TEST_ASSERT_EQUAL(payload.size(), result.value().size());
     TEST_ASSERT_EQUAL_MEMORY(payload.data(), result.value().data(), payload.size());

@@ -23,7 +23,7 @@ class LinTransportLayer : protected LinFrameTransfer{
 public:
     using LinFrameTransfer::LinFrameTransfer;
 
-    std::optional<std::vector<uint8_t>> writePDU(uint8_t* NAD, const std::vector<uint8_t>& payload, const uint8_t newNAD = 0);
+    std::optional<std::vector<uint8_t>> writePDU(uint8_t &NAD, const std::vector<uint8_t>& payload, const uint8_t newNAD = 0);
 
 protected:
     // Packet Data Unit (PDU)
@@ -121,13 +121,13 @@ protected:
         };
     };
 
-    inline std::vector<std::vector<uint8_t>> framesetFromPayload(const uint8_t *NAD, const std::vector<uint8_t> &payload);
-    inline void fillSingleFrame(LinTransportLayer::PDU::SingleFrame& singleFrame, const uint8_t *NAD, const std::vector<uint8_t> &payload);
-    inline void fillFirstFrame(LinTransportLayer::PDU::FirstFrame& firstFrame, const uint8_t *NAD, const std::vector<uint8_t> &payload, int &bytesWritten);
-    inline void fillConsecutiveFrame(LinTransportLayer::PDU::ConsecutiveFrame& consecutiveFrame, const uint8_t *NAD, const uint8_t sequenceNumber, const std::vector<uint8_t> &payload, int &bytesWritten);
+    inline std::vector<std::vector<uint8_t>> framesetFromPayload(const uint8_t NAD, const std::vector<uint8_t> &payload);
+    inline void fillSingleFrame(LinTransportLayer::PDU::SingleFrame &singleFrame, const uint8_t NAD, const std::vector<uint8_t> &payload);
+    inline void fillFirstFrame(LinTransportLayer::PDU::FirstFrame &firstFrame, const uint8_t NAD, const std::vector<uint8_t> &payload, int &bytesWritten);
+    inline void fillConsecutiveFrame(LinTransportLayer::PDU::ConsecutiveFrame &consecutiveFrame, const uint8_t NAD, const uint8_t sequenceNumber, const std::vector<uint8_t> &payload, int &bytesWritten);
 
 private:
-    inline std::optional<std::vector<uint8_t>> readPduResponse(uint8_t *NAD, const uint8_t newNAD = 0);
+    inline std::optional<std::vector<uint8_t>> readPduResponse(uint8_t &NAD, const uint8_t newNAD = 0);
     inline void readSingleFrame(PDU::SingleFrame &singleFrame, std::vector<uint8_t> &payload);
     inline bool readFirstFrame(PDU::FirstFrame &firstFrame, std::vector<uint8_t> &payload, size_t &announcedBytes);
     inline bool readConsecutiveFrame(PDU::ConsecutiveFrame &consecutiveFrame, std::vector<uint8_t> &payload, size_t &announcedBytes, int frameCounter);

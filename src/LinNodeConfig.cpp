@@ -63,7 +63,7 @@ void LinNodeConfig::requestGoToSleep()
     writeFrame(FRAME_ID::MASTER_REQUEST, frameData);
 }
 
-std::optional<std::vector<uint8_t>> LinNodeConfig::readById(uint8_t* NAD, uint16_t supplierId, uint16_t functionId, uint8_t id) {
+std::optional<std::vector<uint8_t>> LinNodeConfig::readById(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint8_t id) {
     uint8_t SID = static_cast<uint8_t>(ServiceIdentifier::READ_BY_ID);
     std::vector<uint8_t> payload = {
         SID,
@@ -98,16 +98,16 @@ std::optional<std::vector<uint8_t>> LinNodeConfig::readById(uint8_t* NAD, uint16
 /// @param functionId Function ID (may wildcard)
 /// @param variantId Variant of identical nodes
 /// @return 
-bool LinNodeConfig::readProductId(uint8_t* NAD, uint16_t* supplierId, uint16_t* functionId, uint8_t* variantId)
+bool LinNodeConfig::readProductId(uint8_t &NAD, uint16_t &supplierId, uint16_t &functionId, uint8_t &variantId)
 {
     uint8_t SID = static_cast<uint8_t>(ServiceIdentifier::READ_BY_ID);
     std::vector<uint8_t> payload = {
         SID,
         (uint8_t)CMD_Identifier::PRODUCT_ID,
-        (uint8_t)lowByte(*supplierId),
-        (uint8_t)highByte(*supplierId),
-        (uint8_t)lowByte(*functionId),
-        (uint8_t)highByte(*functionId)
+        (uint8_t)lowByte(supplierId),
+        (uint8_t)highByte(supplierId),
+        (uint8_t)lowByte(functionId),
+        (uint8_t)highByte(functionId)
     };
     auto raw = writePDU(NAD, payload);
 
@@ -129,9 +129,9 @@ bool LinNodeConfig::readProductId(uint8_t* NAD, uint16_t* supplierId, uint16_t* 
 
     responseSid0ProductId* re = reinterpret_cast<responseSid0ProductId*>(raw.value().data());
 
-    *supplierId = re->supplierId_MSB << 8 | re->supplierId_LSB;
-    *functionId = re->functionId_MSB << 8 | re->functionId_LSB;
-    *variantId = re->variantId;
+    supplierId = re->supplierId_MSB << 8 | re->supplierId_LSB;
+    functionId = re->functionId_MSB << 8 | re->functionId_LSB;
+    variantId = re->variantId;
     
     return true;
 }
@@ -144,16 +144,16 @@ bool LinNodeConfig::readProductId(uint8_t* NAD, uint16_t* supplierId, uint16_t* 
 /// @param functionId 
 /// @param serialNumber 
 /// @return 
-bool LinNodeConfig::readSerialNumber(uint8_t* NAD, uint16_t* supplierId, uint16_t* functionId, uint32_t* serialNumber)
+bool LinNodeConfig::readSerialNumber(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint32_t &serialNumber)
 {
     uint8_t SID = static_cast<uint8_t>(ServiceIdentifier::READ_BY_ID);
     std::vector<uint8_t> payload = {
         SID,
         (uint8_t)CMD_Identifier::PRODUCT_ID,
-        (uint8_t)lowByte(*supplierId),
-        (uint8_t)highByte(*supplierId),
-        (uint8_t)lowByte(*functionId),
-        (uint8_t)highByte(*functionId)
+        (uint8_t)lowByte(supplierId),
+        (uint8_t)highByte(supplierId),
+        (uint8_t)lowByte(functionId),
+        (uint8_t)highByte(functionId)
     };
     auto raw = writePDU(NAD, payload);
 
@@ -178,7 +178,7 @@ bool LinNodeConfig::readSerialNumber(uint8_t* NAD, uint16_t* supplierId, uint16_
             return false;
     */
 
-    *serialNumber = re->serialNumber_MSB << 24 | re->serialNumber_LSB3 << 16 | re->serialNumber_LSB2 << 8 | re->serialNumber_LSB;
+    serialNumber = re->serialNumber_MSB << 24 | re->serialNumber_LSB3 << 16 | re->serialNumber_LSB2 << 8 | re->serialNumber_LSB;
     
     return true;
 }
@@ -191,15 +191,15 @@ bool LinNodeConfig::readSerialNumber(uint8_t* NAD, uint16_t* supplierId, uint16_
 /// @param functionId wildcard = 0x3FFF
 /// @param newNAD new NAD
 /// @return success
-bool LinNodeConfig::assignNAD(uint8_t* NAD, uint16_t* supplierId, uint16_t* functionId, uint8_t newNAD)
+bool LinNodeConfig::assignNAD(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint8_t newNAD)
 {
     uint8_t SID = static_cast<uint8_t>(ServiceIdentifier::ASSIGN_NAD);
     std::vector<uint8_t> payload = {
         SID,
-        (uint8_t)lowByte(*supplierId),
-        (uint8_t)highByte(*supplierId),
-        (uint8_t)lowByte(*functionId),
-        (uint8_t)highByte(*functionId),
+        (uint8_t)lowByte(supplierId),
+        (uint8_t)highByte(supplierId),
+        (uint8_t)lowByte(functionId),
+        (uint8_t)highByte(functionId),
         (uint8_t)newNAD
     };
     auto raw = writePDU(NAD, payload);
@@ -227,7 +227,7 @@ bool LinNodeConfig::assignNAD(uint8_t* NAD, uint16_t* supplierId, uint16_t* func
 /// @param mask 4. Do a bitwise AND with Mask
 /// @param newNAD 5. if the final result is zero change the NAD to newNAD
 /// @return success
-bool LinNodeConfig::conditionalChangeNAD(uint8_t* NAD, uint8_t id, uint8_t byte, uint8_t invert, uint8_t mask, uint8_t newNAD)
+bool LinNodeConfig::conditionalChangeNAD(uint8_t &NAD, uint8_t id, uint8_t byte, uint8_t invert, uint8_t mask, uint8_t newNAD)
 {
     uint8_t SID = static_cast<uint8_t>(ServiceIdentifier::CONDITIONAL_CHANGE);
     std::vector<uint8_t> payload = {
@@ -267,7 +267,7 @@ bool LinNodeConfig::conditionalChangeNAD(uint8_t* NAD, uint8_t id, uint8_t byte,
 /// LIN specification and ensures that the node retains its settings after a power cycle.
 /// @param NAD Node Address (NAD) of the target
 /// @return success
-bool LinNodeConfig::saveConfig(uint8_t* NAD)
+bool LinNodeConfig::saveConfig(uint8_t &NAD)
 {
     uint8_t SID = static_cast<uint8_t>(ServiceIdentifier::SAVE_CONFIG);
     std::vector<uint8_t> payload = {
@@ -292,7 +292,7 @@ bool LinNodeConfig::saveConfig(uint8_t* NAD)
 /// @param PID2 third protected identifier (PID) in the frame ID range
 /// @param PID3 fourth protected identifier (PID) in the frame ID range
 /// @return success
-bool LinNodeConfig::assignFrameIdRange(uint8_t* NAD, uint8_t startIndex, uint8_t PID0, uint8_t PID1, uint8_t PID2, uint8_t PID3)
+bool LinNodeConfig::assignFrameIdRange(uint8_t &NAD, uint8_t startIndex, uint8_t PID0, uint8_t PID1, uint8_t PID2, uint8_t PID3)
 {
     uint8_t SID = static_cast<uint8_t>(ServiceIdentifier::ASSIGN_FRAME_IDENTIFIER_RANGE);
     std::vector<uint8_t> payload = {

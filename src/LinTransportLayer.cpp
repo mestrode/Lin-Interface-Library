@@ -29,7 +29,7 @@ constexpr auto timeout_DtlSlaveResponse_per_frame = 50; // ms - Spec has higher 
 /// @param payload 
 /// @param newNAD in case of SID: CONDITIONAL_CHANGE of NAD node will answer by using new AND
 /// @return 
-std::optional<std::vector<uint8_t>> LinTransportLayer::writePDU(uint8_t* NAD, const std::vector<uint8_t>& payload, uint8_t newNAD)
+std::optional<std::vector<uint8_t>> LinTransportLayer::writePDU(uint8_t &NAD, const std::vector<uint8_t>& payload, uint8_t newNAD)
 {
     // prepare frameset
     std::vector<std::vector<uint8_t>> frameSet = framesetFromPayload(NAD, payload);
@@ -45,7 +45,7 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::writePDU(uint8_t* NAD, co
     return readPduResponse(NAD, newNAD);
 }
 
-std::vector<std::vector<uint8_t>> LinTransportLayer::framesetFromPayload(const uint8_t* NAD, const std::vector<uint8_t>& payload)
+std::vector<std::vector<uint8_t>> LinTransportLayer::framesetFromPayload(const uint8_t NAD, const std::vector<uint8_t>& payload)
 {
     // verify max Len 
     // if (payload.size() >= 4096) { return {}; }
@@ -87,12 +87,12 @@ std::vector<std::vector<uint8_t>> LinTransportLayer::framesetFromPayload(const u
 }
 
 void LinTransportLayer::fillSingleFrame(
-    LinTransportLayer::PDU::SingleFrame& singleFrame,
-    const uint8_t* NAD,
+    LinTransportLayer::PDU::SingleFrame &singleFrame,
+    const uint8_t NAD,
     const std::vector<uint8_t> &payload
 ){
     // NAD
-    singleFrame.NAD = *NAD;
+    singleFrame.NAD = NAD;
 
     std::size_t len = payload.size();
     singleFrame.setLen(len);
@@ -116,13 +116,13 @@ void LinTransportLayer::fillSingleFrame(
 }
 
 void LinTransportLayer::fillFirstFrame(
-    LinTransportLayer::PDU::FirstFrame& firstFrame,
-    const uint8_t* NAD,
+    LinTransportLayer::PDU::FirstFrame &firstFrame,
+    const uint8_t NAD,
     const std::vector<uint8_t> &payload,
     int &bytesWritten)
 {
     // NAD
-    firstFrame.NAD = *NAD;
+    firstFrame.NAD = NAD;
 
     std::size_t len = payload.size();
     firstFrame.setLen(len);
@@ -139,13 +139,13 @@ void LinTransportLayer::fillFirstFrame(
 }
 
 void LinTransportLayer::fillConsecutiveFrame(
-    LinTransportLayer::PDU::ConsecutiveFrame& consecutiveFrame,
-    const uint8_t* NAD,
+    LinTransportLayer::PDU::ConsecutiveFrame &consecutiveFrame,
+    const uint8_t NAD,
     const uint8_t sequenceNumber,
     const std::vector<uint8_t> &payload, int &bytesWritten
 ){
     // NAD
-    consecutiveFrame.NAD = *NAD;
+    consecutiveFrame.NAD = NAD;
     consecutiveFrame.setSequenceNumber(sequenceNumber);
     // Data [0..n]
     auto bytesToCopy = std::min(sizeof(PDU::ConsecutiveFrame::data), payload.size() - bytesWritten);
@@ -170,9 +170,9 @@ void LinTransportLayer::fillConsecutiveFrame(
 /// @brief Start a PDU SlaveRequest
 /// @param NAD Node Adress (via pointer), wildcard will be replaced by received NAD
 /// @return payload
-std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t* NAD, const uint8_t newNAD)
+std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t &NAD, const uint8_t newNAD)
 {
-    uint8_t acceptedNAD = *NAD;
+    uint8_t acceptedNAD = NAD;
     constexpr auto isSingleFrame_or_isFirstFrame = 0;
     uint8_t frameCounter = isSingleFrame_or_isFirstFrame;
     size_t announcedBytes;
@@ -235,7 +235,7 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t* 
                 if (!readFirstFrame(firstFrame, payload, announcedBytes))
                 {
                     // STRICT: when announcedBytes is less than 7 bytes, frame shall be ignored
-                    acceptedNAD = *NAD; // revert in case of wildcard
+                    acceptedNAD = NAD; // revert in case of wildcard
                     continue;
                 }
 
@@ -245,7 +245,7 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t* 
             }
 
             // STRICT: unexpected frame type shall be ignored
-            acceptedNAD = *NAD; // revert in case of wildcard
+            acceptedNAD = NAD; // revert in case of wildcard
 
         } else {
             // frameCounter == isConsecutiveFrame
@@ -284,8 +284,8 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t* 
 
     // success
     // may return new NAT
-    if ((*NAD == PDU::NAD::BROADCAST) || (newNAD != 0)) {
-        *NAD = acceptedNAD;
+    if ((NAD == PDU::NAD::BROADCAST) || (newNAD != 0)) {
+        NAD = acceptedNAD;
     }
     return payload;
 }

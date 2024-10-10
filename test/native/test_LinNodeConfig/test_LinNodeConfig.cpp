@@ -96,7 +96,7 @@ void test_lin_getID() {
     // no fillbytes required
     linDriver->mock_Input(response.checksum);
 
-    bool result = linNodeConfig->readProductId(&NAD, &supplierId, &functionId, &variant);
+    bool result = linNodeConfig->readProductId(NAD, supplierId, functionId, variant);
 
     TEST_ASSERT_EQUAL(0x0A, NAD);
     TEST_ASSERT_EQUAL(0x2E06, supplierId);
@@ -152,7 +152,7 @@ void test_lin_assignNAD_ok()
     linDriver->mock_Input(response.payload_fillbytes);
     linDriver->mock_Input(response.checksum);
 
-    bool result = linNodeConfig->assignNAD(&NAD, &supplierId, &functionId, newNAD);
+    bool result = linNodeConfig->assignNAD(NAD, supplierId, functionId, newNAD);
 
     TEST_ASSERT_EQUAL(oldNAD, NAD);  // <-- answer will follow on oldNAD
 
@@ -208,7 +208,7 @@ void test_lin_conditionalChangeNAD_ok()
     linDriver->mock_Input(response.payload_fillbytes);
     linDriver->mock_Input(response.checksum);
 
-    bool result = linNodeConfig->conditionalChangeNAD(&NAD, id, byte, invert, mask, newNAD);
+    bool result = linNodeConfig->conditionalChangeNAD(NAD, id, byte, invert, mask, newNAD);
 
     TEST_ASSERT_EQUAL(newNAD, NAD);  // <-- answer will follow on newNAD
 
@@ -256,7 +256,7 @@ void test_lin_saveConfig_ok()
     linDriver->mock_Input(response.payload_fillbytes);
     linDriver->mock_Input(response.checksum);
 
-    bool result = linNodeConfig->saveConfig(&NAD);
+    bool result = linNodeConfig->saveConfig(NAD);
 
     TEST_ASSERT_EQUAL(NAD_response, NAD);  // <-- answer will follow on oldNAD
 
@@ -313,7 +313,7 @@ void test_lin_AssignFrameIdRange_ok()
     linDriver->mock_Input(response.payload_fillbytes);
     linDriver->mock_Input(response.checksum);
 
-    bool result = linNodeConfig->assignFrameIdRange(&NAD, start, PID0, PID1, PID2, PID3);
+    bool result = linNodeConfig->assignFrameIdRange(NAD, start, PID0, PID1, PID2, PID3);
 
     TEST_ASSERT_EQUAL(NAD_response, NAD);  // <-- answer will follow on oldNAD
 
