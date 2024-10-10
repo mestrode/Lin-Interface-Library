@@ -116,7 +116,6 @@ bool LinNodeConfig::readProductId(uint8_t &NAD, uint16_t &supplierId, uint16_t &
         return false;
     }
 
-
     struct responseSid0ProductId
     {
         uint8_t RSID;
@@ -127,11 +126,11 @@ bool LinNodeConfig::readProductId(uint8_t &NAD, uint16_t &supplierId, uint16_t &
         uint8_t variantId;
     };
 
-    responseSid0ProductId* re = reinterpret_cast<responseSid0ProductId*>(raw.value().data());
+    responseSid0ProductId& re = *reinterpret_cast<responseSid0ProductId*>(raw.value().data());
 
-    supplierId = re->supplierId_MSB << 8 | re->supplierId_LSB;
-    functionId = re->functionId_MSB << 8 | re->functionId_LSB;
-    variantId = re->variantId;
+    supplierId = re.supplierId_MSB << 8 | re.supplierId_LSB;
+    functionId = re.functionId_MSB << 8 | re.functionId_LSB;
+    variantId = re.variantId;
     
     return true;
 }
@@ -171,14 +170,14 @@ bool LinNodeConfig::readSerialNumber(uint8_t &NAD, uint16_t supplierId, uint16_t
         uint8_t serialNumber_MSB;
     };
 
-    responseSid0ProductId* re = reinterpret_cast<responseSid0ProductId*>(raw.value().data());
+    responseSid0ProductId& re = *reinterpret_cast<responseSid0ProductId*>(raw.value().data());
 
     /* no double check neccessary
-        if (re->RSID != getRSID(SID))
+        if (re.RSID != getRSID(SID))
             return false;
     */
 
-    serialNumber = re->serialNumber_MSB << 24 | re->serialNumber_LSB3 << 16 | re->serialNumber_LSB2 << 8 | re->serialNumber_LSB;
+    serialNumber = re.serialNumber_MSB << 24 | re.serialNumber_LSB3 << 16 | re.serialNumber_LSB2 << 8 | re.serialNumber_LSB;
     
     return true;
 }

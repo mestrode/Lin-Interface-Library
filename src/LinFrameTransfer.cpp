@@ -18,6 +18,7 @@
 
 #include <optional>
 #include <vector>
+#include <numeric>
 
 enum class debugLevel {
     none = 0,
@@ -153,7 +154,7 @@ public:
         }
     }
 
-    void printRawFrame(const uint8_t protectedID, std::vector<uint8_t>& data, uint8_t rxChecksum, uint8_t expectedChecksum)
+    void printRawFrame(const uint8_t protectedID, const std::vector<uint8_t>& data, uint8_t rxChecksum, uint8_t expectedChecksum)
     {
         debugStream.print(" --- FID ");
         debugStream.print(protectedID & LinFrameTransfer::FRAME_ID_MASK, HEX);

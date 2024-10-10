@@ -69,7 +69,7 @@ protected:
             {
                 // High Nibble: SingleFrame
                 // Low Nibble : LEN (= max 6)
-                PCI_LEN = PDU::PCI::SF_Type | static_cast<uint8_t>(len & 0xFF);
+                PCI_LEN = PDU::PCI::SF_Type | static_cast<uint8_t>(len & MASK_PCI_LEN);
             }
 
             inline std::size_t getLen()
@@ -130,7 +130,7 @@ private:
     inline std::optional<std::vector<uint8_t>> readPduResponse(uint8_t &NAD, const uint8_t newNAD = 0);
     inline void readSingleFrame(PDU::SingleFrame &singleFrame, std::vector<uint8_t> &payload);
     inline bool readFirstFrame(PDU::FirstFrame &firstFrame, std::vector<uint8_t> &payload, size_t &announcedBytes);
-    inline bool readConsecutiveFrame(PDU::ConsecutiveFrame &consecutiveFrame, std::vector<uint8_t> &payload, size_t &announcedBytes, int frameCounter);
+    inline bool readConsecutiveFrame(PDU::ConsecutiveFrame &consecutiveFrame, std::vector<uint8_t> &payload, const size_t &announcedBytes, int frameCounter);
 
     static_assert(offsetof(PDU::SingleFrame, PCI_LEN) == offsetof(PDU::FirstFrame, PCI_LEN256),
         "Data position of SingleFrame::PCI_LEN does not match FirstFrame::PCI_LEN256");

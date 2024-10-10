@@ -35,7 +35,7 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::writePDU(uint8_t &NAD, co
     std::vector<std::vector<uint8_t>> frameSet = framesetFromPayload(NAD, payload);
     
     // write full frameset
-    for (std::vector<uint8_t>& frame : frameSet)
+    for (const std::vector<uint8_t>& frame : frameSet)
     {
         writeFrame(FRAME_ID::MASTER_REQUEST, frame);
     }
@@ -208,9 +208,8 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t &
         if (frameCounter == isSingleFrame_or_isFirstFrame)
         {
             /// NAD will be replaced...
-            if ((frameCounter == isSingleFrame_or_isFirstFrame) &&
-                ((acceptedNAD == PDU::NAD::BROADCAST) || // on Wildcard
-                (newNAD == rxNAD)))                     // on NAD Change my config requect
+            if ((acceptedNAD == PDU::NAD::BROADCAST) || // on Wildcard
+                (newNAD == rxNAD))                      // on NAD Change my config requect
             {
                 // Boradcast or Cmd "Conditional Change of NAD" was successfull
                 acceptedNAD = rxNAD;
@@ -323,7 +322,7 @@ bool LinTransportLayer::readFirstFrame(PDU::FirstFrame &firstFrame, std::vector<
     return true;
 }
 
-bool LinTransportLayer::readConsecutiveFrame(PDU::ConsecutiveFrame &consecutiveFrame, std::vector<uint8_t> &payload, size_t &announcedBytes, int frameCounter)
+bool LinTransportLayer::readConsecutiveFrame(PDU::ConsecutiveFrame &consecutiveFrame, std::vector<uint8_t> &payload, const size_t &announcedBytes, int frameCounter)
 {
     auto expectedSequenceNumber = frameCounter & PDU::MASK_PCI_SN;
     auto rxSequenceNumber = consecutiveFrame.getSequenceNumber();
