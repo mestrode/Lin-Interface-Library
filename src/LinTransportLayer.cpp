@@ -146,7 +146,7 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t &
         if (0 == frameCounter)
         {
             /// NAD will be replaced...
-            if ((PDU::NAD::BROADCAST == acceptedNAD) || // on Wildcard
+            if ((PDU::NAD_type::BROADCAST == acceptedNAD) || // on Wildcard
                 (frame.getNad() == newNAD))             // on NAD Change my config requect
             {
                 // Boradcast or Cmd "Conditional Change of NAD" was successfull
@@ -215,7 +215,7 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t &
 
     // success
     // may return new NAT
-    if ((PDU::NAD::BROADCAST == NAD) || (0 != newNAD)) {
+    if ((PDU::NAD_type::BROADCAST == NAD) || (0 != newNAD)) {
         NAD = acceptedNAD;
     }
     return payload;
