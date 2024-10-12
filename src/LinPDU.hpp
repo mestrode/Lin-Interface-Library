@@ -78,10 +78,10 @@ public:
         /// @return count of encoded bytes
         size_t setDataAndLen(const std::vector<uint8_t>& payload)
         {
-            int len = std::min(sizeof(DATA), payload.size());
+            int len = std::min(DATA.size(), payload.size());
             setLen(len);
             std::copy_n(payload.begin(), len, DATA.begin());
-            if (len < sizeof(DATA)) {
+            if (len < DATA.size()) {
                 std::fill(
                     DATA.begin() + len,
                     DATA.end(),
@@ -126,8 +126,8 @@ public:
             // - full use of DATA byes: len = 5
             // - no need for fill bytes
             // --> no verification of sizeof(new_data)
-            std::copy_n(new_data.begin(), sizeof(DATA), DATA.begin());
-            return sizeof(DATA);
+            std::copy_n(new_data.begin(), DATA.size(), DATA.begin());
+            return DATA.size();
         }
 
         /// @brief returns the part of the payload that is coded in the first frame
@@ -176,9 +176,9 @@ public:
         /// @return count of encoded bytes 
         size_t setData(const std::vector<uint8_t>& payload, const int offset = 0)
         {
-            int len = std::min(sizeof(DATA), payload.size() - offset);
+            int len = std::min(DATA.size(), payload.size() - offset);
             std::copy_n(payload.begin() + offset, len, DATA.begin());
-            if (len < sizeof(DATA)) {
+            if (len < DATA.size()) {
                 std::fill(
                     DATA.begin() + len,
                     DATA.end(),
@@ -196,7 +196,7 @@ public:
 
         std::vector<uint8_t> getData(size_t len) const
         {
-            size_t l = std::min(sizeof(DATA), len);
+            size_t l = std::min(DATA.size(), len);
             return {DATA.begin(), DATA.begin() + l};
         }
     };
