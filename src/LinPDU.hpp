@@ -1,3 +1,12 @@
+// LinPDU.hpp
+//
+// Provides a class PDU
+// - supporting SingleFrame, FirstFrame and ConsecutiveFrame communication for TransportLayer
+// - Sleep Request Command uses a specific byte configuration byside the three frame types 
+// 
+// LIN Specification 2.2A
+// Source https://www.lin-cia.org/fileadmin/microsites/lin-cia.org/resources/documents/LIN_2.2A.pdf
+
 #pragma once
 
 #include <cstdint>
@@ -253,8 +262,7 @@ public:
 
     static PDU getSleepCmd()
     {
-        // https://www.lin-cia.org/fileadmin/microsites/lin-cia.org/resources/documents/LIN_2.2A.pdf
-        // 2.6.3 Go To Sleep
+        // Lin Spec: 2.6.3 Go To Sleep
         // Request from master to all nodes to go to sleep
         PDU sleepCmd;
         sleepCmd.common.NAD = NAD::SLEEP;
