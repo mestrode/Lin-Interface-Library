@@ -54,6 +54,8 @@ public:
 
     void end() {
         std::cout << "HardwareSerial::end() called" << std::endl;
+        std::cout << "TX " << txCnt << "\t\tBytes" << std::endl;
+        std::cout << "RX\t" << rxCnt << "\tBytes" << std::endl;
         TEST_ASSERT_TRUE_MESSAGE(begin_used, "missing call of HardwareSerial::begin()");
         TEST_ASSERT_TRUE_MESSAGE(flush_done, "expect HardwareSerial::flush() before HardwareSerial::end()");
         begin_used = false;
@@ -76,7 +78,8 @@ public:
         if (mock_loopback && !loopbackBuffer.empty()) {
             int byte = loopbackBuffer.front();
             loopbackBuffer.pop();
-            std::cout << "                    < 0x" << std::hex << byte << std::dec << " (loopback)" << std::endl;
+            rxCnt++;
+            std::cout << "\t#" << rxCnt << "\t\t\t< 0x" << std::hex << byte << std::dec  << "\t(loopback)" << std::endl;
             return byte;
         }
 
@@ -87,7 +90,8 @@ public:
         }
         int byte = rxBuffer.front();
         rxBuffer.pop();
-        std::cout << "                    < 0x" << std::hex << byte << std::dec << std::endl;
+        rxCnt++;
+        std::cout << "\t#" << rxCnt << "\t\t\t< 0x" << std::hex << byte << std::dec << std::endl;
         return byte;
     }
 
@@ -98,7 +102,8 @@ public:
         {
             loopbackBuffer.push(byte);
         }
-        std::cout << "            > 0x" << std::hex << (int)byte << std::dec << std::endl;
+        txCnt++;
+        std::cout << "#" << txCnt << "\t\t\t0x" << std::hex << (int)byte << std::dec << " >"<< std::endl;
         flush_done = false;
         return mock_Stream::write(byte); // Call the base class write method to handle output
     }
@@ -131,6 +136,8 @@ public:
     }
 
 private:
+    int txCnt = 0;
+    int rxCnt = 0;
     uint32_t mock_baud = 0;
     std::queue<uint8_t> loopbackBuffer;
     std::queue<uint8_t> rxBuffer; // Mock RX buffer for incoming data
