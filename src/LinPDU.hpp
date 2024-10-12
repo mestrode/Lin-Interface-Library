@@ -197,13 +197,10 @@ public:
             return len;
         }
 
-        // returns 
-        std::vector<uint8_t> getData() const
-        {
-            return {DATA.begin(), DATA.end()};
-        }
-
-        std::vector<uint8_t> getData(size_t len) const
+        /// @brief returns the part of the payload that is coded in the consecutive frame
+        /// @param len of data (will be limited to max 6 bytes)
+        /// @return vector (len bytes)
+        inline std::vector<uint8_t> getData(size_t len) const
         {
             size_t l = std::min(DATA.size(), len);
             return {DATA.begin(), DATA.begin() + l};
