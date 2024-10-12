@@ -76,7 +76,7 @@ public:
 
         /// @brief retuns payload of frame
         /// @return data vector (0..6 bytes)
-        std::vector<uint8_t> getData() const
+        inline std::vector<uint8_t> getData() const
         {
             size_t l = getLen();
             return {DATA.begin(), DATA.begin() + l};
@@ -129,7 +129,7 @@ public:
         /// @brief copy data into first PDU, does not encode LEN
         /// @param new_data source vector, must exceed 6 bytes
         /// @return count of encoded bytes
-        size_t setData(const std::vector<uint8_t>& new_data)
+        inline size_t setData(const std::vector<uint8_t>& new_data)
         {
             // according to spec: every valid FirstFrame does have
             // - full use of DATA byes: len = 5
@@ -141,7 +141,7 @@ public:
 
         /// @brief returns the part of the payload that is coded in the first frame
         /// @return vector (5 bytes)
-        std::vector<uint8_t> getData() const
+        inline std::vector<uint8_t> getData() const
         {
             return {DATA.begin(), DATA.end()};
         }
@@ -248,7 +248,7 @@ public:
 
     /// @brief decode type of PDU - can only handel SingleFrame, FirstFrame, ConsecutiveFrame; NOT sleepCmd
     /// @return type of PDU
-    const PCI_Type getType() const
+    inline PCI_Type getType() const
     {
         return static_cast<PCI_Type>(common.PCI & PDU::MASK_PCI_TYPE);
     }
@@ -266,7 +266,7 @@ public:
         // Lin Spec: 2.6.3 Go To Sleep
         // Request from master to all nodes to go to sleep
         PDU sleepCmd;
-        sleepCmd.common.NAD = NAD::SLEEP;
+        sleepCmd.common.NAD = NAD_type::SLEEP;
         sleepCmd.common.PCI = fillByte;
         sleepCmd.common.framedata.fill(fillByte);
         return sleepCmd;
