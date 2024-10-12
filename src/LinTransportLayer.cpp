@@ -19,6 +19,8 @@
 #include <vector>
 #include <unordered_map>
 
+#include "LinPDU.hpp"
+
 // LIN2.2A Spec Table 3.2
 constexpr auto timeout_DtlSlaveResponse_per_frame = 50; // ms - Spec has higher timeout: ~1 second
 
@@ -32,12 +34,12 @@ constexpr auto timeout_DtlSlaveResponse_per_frame = 50; // ms - Spec has higher 
 std::optional<std::vector<uint8_t>> LinTransportLayer::writePDU(uint8_t &NAD, const std::vector<uint8_t>& payload, uint8_t newNAD)
 {
     // prepare frameset
-    std::vector<std::vector<uint8_t>> frameSet = framesetFromPayload(NAD, payload);
+    std::vector<PDU> frameSet = framesetFromPayload(NAD, payload);
     
     // write full frameset
-    for (const std::vector<uint8_t>& frame : frameSet)
+    for (const PDU& frame : frameSet)
     {
-        writeFrame(FRAME_ID::MASTER_REQUEST, frame);
+        writeFrame(FRAME_ID::MASTER_REQUEST, frame.asVector());
     }
 
     // read response
@@ -45,126 +47,71 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::writePDU(uint8_t &NAD, co
     return readPduResponse(NAD, newNAD);
 }
 
-std::vector<std::vector<uint8_t>> LinTransportLayer::framesetFromPayload(const uint8_t NAD, const std::vector<uint8_t>& payload)
+std::vector<PDU> LinTransportLayer::framesetFromPayload(const uint8_t NAD, const std::vector<uint8_t>& payload)
 {
     // verify max Len 
     // if (payload.size() >= 4096) { return {}; }
 
     // Single Frame
-    if (payload.size() <= sizeof(PDU::SingleFrame::data))
+    if (payload.size() <= sizeof(PDU::dataLenSingle))
     {
-        std::vector<std::vector<uint8_t>> frameset(1, std::vector<uint8_t>(sizeof(PDU::SingleFrame)));
+        std::vector<PDU> frameset(1);
 
-        PDU::SingleFrame* singleFrame = reinterpret_cast<PDU::SingleFrame*>(frameset[0].data());
-        fillSingleFrame(*singleFrame, NAD, payload);
+        fillSingleFrame(frameset[0], NAD, payload);
 
-        return frameset;
+        return std::move(frameset);
     }
 
-    // Multi Frame = First Frame + n * Consecutive Frame
-    static_assert(sizeof(PDU::FirstFrame) == sizeof(PDU::ConsecutiveFrame),
-        "Size of PDU::FirstFrame does not match PDU::Consecutive");
+    // Mulit Frame: FirstFrame + n * ConsecutiveFrame
+    auto ceilDiv = [](size_t nominator, size_t denominator) {
+        return (nominator + denominator - 1) / denominator;
+    };
 
-    auto data_in_CF = payload.size() - sizeof(PDU::FirstFrame::data);
-    auto CF_count = (data_in_CF + sizeof(PDU::ConsecutiveFrame::data) - 1) / sizeof(PDU::ConsecutiveFrame::data); // ceiling division
-    std::vector<std::vector<uint8_t>> frameset(1 + CF_count, std::vector<uint8_t>(sizeof(PDU::ConsecutiveFrame)));
+    auto data_in_CF = payload.size() - PDU::dataLenFirst;
+    auto CF_count = ceilDiv(data_in_CF, PDU::dataLenConsecutive);
+    std::vector<PDU> frameset(1 + CF_count);
 
     auto bytesWritten = 0;
 
-    // First Frame
-    PDU::FirstFrame* firstFrame = reinterpret_cast<PDU::FirstFrame*>(frameset[0].data());
-    fillFirstFrame(*firstFrame, NAD, payload, bytesWritten);
-
-    // a series of Consecutive Frames; Last one maybe contain Fill Bytes
-    // Start with 1; FirstFrame was 0
+    fillFirstFrame(frameset[0], NAD, payload, bytesWritten);
     for (uint8_t i = 1; i<=CF_count; ++i)
     {
-        PDU::ConsecutiveFrame* consecutiveFrame = reinterpret_cast<PDU::ConsecutiveFrame*>(frameset[i].data());
-        fillConsecutiveFrame(*consecutiveFrame, NAD, i, payload, bytesWritten);
+        fillConsecutiveFrame(frameset[i], NAD, i, payload, bytesWritten);
     }
 
-    return frameset;
+    return std::move(frameset);
 }
 
 void LinTransportLayer::fillSingleFrame(
-    LinTransportLayer::PDU::SingleFrame &singleFrame,
+    PDU &frame,
     const uint8_t NAD,
     const std::vector<uint8_t> &payload
 ){
-    // NAD
-    singleFrame.NAD = NAD;
-
-    std::size_t len = payload.size();
-    singleFrame.setLen(len);
-
-    // Data [0..n]
-    std::copy(
-        payload.begin(),
-        payload.begin() + payload.size(),
-        singleFrame.data
-    );
-
-    // Fill Bytes
-    if (payload.size() < 6)
-    {
-        std::fill(
-            singleFrame.data + payload.size(),
-            singleFrame.data + 6,
-            0xFF
-        );
-    }
+    frame.setNAD(NAD);
+    frame.singleFrame.setDataAndLen(payload);
 }
 
 void LinTransportLayer::fillFirstFrame(
-    LinTransportLayer::PDU::FirstFrame &firstFrame,
+    PDU &frame,
     const uint8_t NAD,
     const std::vector<uint8_t> &payload,
-    int &bytesWritten)
-{
-    // NAD
-    firstFrame.NAD = NAD;
-
-    std::size_t len = payload.size();
-    firstFrame.setLen(len);
-
-    // Data [0..n]
-    std::copy(
-        payload.begin(),
-        payload.begin() + sizeof(PDU::FirstFrame::data),
-        firstFrame.data
-    );
-    bytesWritten += sizeof(PDU::FirstFrame::data);
-
-    // First Frame never contains fill bytes
+    int &bytesWritten
+){
+    frame.setNAD(NAD);
+    frame.firstFrame.setLen(payload.size());
+    bytesWritten += frame.firstFrame.setData(payload);
 }
 
 void LinTransportLayer::fillConsecutiveFrame(
-    LinTransportLayer::PDU::ConsecutiveFrame &consecutiveFrame,
+    PDU &frame,
     const uint8_t NAD,
     const uint8_t sequenceNumber,
-    const std::vector<uint8_t> &payload, int &bytesWritten
+    const std::vector<uint8_t> &payload,
+    int &bytesWritten
 ){
-    // NAD
-    consecutiveFrame.NAD = NAD;
-    consecutiveFrame.setSequenceNumber(sequenceNumber);
-    // Data [0..n]
-    auto bytesToCopy = std::min(sizeof(PDU::ConsecutiveFrame::data), payload.size() - bytesWritten);
-    std::copy(
-        payload.begin() + bytesWritten,
-        payload.begin() + bytesWritten + bytesToCopy,
-        consecutiveFrame.data
-    );
-    bytesWritten += bytesToCopy;
-
-    // Fill Bytes occure only in the last frame
-    if (bytesToCopy < sizeof(PDU::ConsecutiveFrame::data))
-    {
-        std::fill(
-            std::begin(consecutiveFrame.data) + bytesToCopy,
-            std::end(consecutiveFrame.data),
-            0xFF
-        );
-    }
+    frame.setNAD(NAD);
+    frame.consecutiveFrame.setSequenceNumber(sequenceNumber);
+    bytesWritten += frame.consecutiveFrame.setData(payload, bytesWritten);
 }
 
 /// @brief Start a PDU SlaveRequest
@@ -173,8 +120,7 @@ void LinTransportLayer::fillConsecutiveFrame(
 std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t &NAD, const uint8_t newNAD)
 {
     uint8_t acceptedNAD = NAD;
-    constexpr auto isSingleFrame_or_isFirstFrame = 0;
-    uint8_t frameCounter = isSingleFrame_or_isFirstFrame;
+    uint8_t frameCounter = 0;
     size_t announcedBytes;
     std::vector<uint8_t> payload {};
 
@@ -195,49 +141,39 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t &
             continue;
         }
 
-        static_assert(offsetof(PDU::SingleFrame, PCI_LEN) == offsetof(PDU::FirstFrame, PCI_LEN256),
-            "Data position of SingleFrame::PCI_LEN does not match FirstFrame::PCI_LEN256");
-        static_assert(offsetof(PDU::SingleFrame, PCI_LEN) == offsetof(PDU::ConsecutiveFrame, PCI_SN),
-            "Data position of SingleFrame::PCI_LEN does not match PDU::ConsecutiveFrame::PCI_SN");
+        PDU& frame = *reinterpret_cast<PDU*>(rxFrame.value().data());
 
-        // treat as SingleFrame to get FrameType
-        PDU::SingleFrame& singleFrame = *reinterpret_cast<PDU::SingleFrame*>(rxFrame.value().data());
-        uint8_t rxNAD = singleFrame.NAD;
-        uint8_t frameType = singleFrame.getType();
-
-        if (frameCounter == isSingleFrame_or_isFirstFrame)
+        if (0 == frameCounter)
         {
             /// NAD will be replaced...
-            if ((acceptedNAD == PDU::NAD::BROADCAST) || // on Wildcard
-                (newNAD == rxNAD))                      // on NAD Change my config requect
+            if ((PDU::NAD::BROADCAST == acceptedNAD) || // on Wildcard
+                (frame.getNad() == newNAD))             // on NAD Change my config requect
             {
                 // Boradcast or Cmd "Conditional Change of NAD" was successfull
-                acceptedNAD = rxNAD;
+                acceptedNAD = frame.getNad();
             }
 
-            if (acceptedNAD != rxNAD)
+            if (acceptedNAD != frame.getNad())
             {
                 // unexpected NAD: ignore Frame
                 continue;
             }
 
-            // test for type: single frame
-            if (PDU::PCI::SF_Type == frameType) {
-                PDU::SingleFrame& singleFrame = *reinterpret_cast<PDU::SingleFrame*>(rxFrame.value().data());
-                readSingleFrame(singleFrame, payload);
+            if (PDU::PCI_Type::SINGLE == frame.getType()) {
+                if (!readSingleFrame(frame, payload)) {
+                    // STRICT: when announcedBytes is greater than 6 bytes, frame shall be ignored
+                    acceptedNAD = NAD; // revert in case of wildcard
+                    continue;
+                }
                 break; // success
             }
 
-            if (PDU::PCI::FF_Type == frameType)
-            {
-                PDU::FirstFrame& firstFrame = *reinterpret_cast<PDU::FirstFrame*>(rxFrame.value().data());
-                if (!readFirstFrame(firstFrame, payload, announcedBytes))
-                {
+            if (PDU::PCI_Type::FIRST == frame.getType()) {
+                if (!readFirstFrame(frame, payload, announcedBytes)) {
                     // STRICT: when announcedBytes is less than 7 bytes, frame shall be ignored
                     acceptedNAD = NAD; // revert in case of wildcard
                     continue;
                 }
-
                 frameCounter++;
                 timeout = millis() + timeout_DtlSlaveResponse_per_frame;
                 continue;
@@ -249,28 +185,24 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t &
         } else {
             // frameCounter == isConsecutiveFrame
             // sequence of CF started -> error handling now changed
-            if (acceptedNAD != rxNAD)
-            {
+            if (acceptedNAD != frame.getNad()) {
                 // STRICT: mismatch with received NAT of FirstFrame --> abort
                 return {};
             }
 
-            if (PDU::PCI::CF_Type != frameType) {
+            if (PDU::PCI_Type::CONSECUTIVE != frame.getType()) {
                 // STRICT: unexpected frame type --> abort
                 return {};
             }
 
-            PDU::ConsecutiveFrame& consecutiveFrame = *reinterpret_cast<PDU::ConsecutiveFrame*>(rxFrame.value().data());
-            if (!readConsecutiveFrame(consecutiveFrame, payload, announcedBytes, frameCounter))
-            {
+            if (!readConsecutiveFrame(frame, payload, announcedBytes, frameCounter)) {
                 // STRICT: unexpected sequence number received --> abort
                 return {};
             }
 
             frameCounter++;
             timeout += timeout_DtlSlaveResponse_per_frame;
-            if (announcedBytes == payload.size())
-            {
+            if (announcedBytes == payload.size()) {
                 break; // success
             }
         }
@@ -283,61 +215,51 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t &
 
     // success
     // may return new NAT
-    if ((NAD == PDU::NAD::BROADCAST) || (newNAD != 0)) {
+    if ((PDU::NAD::BROADCAST == NAD) || (0 != newNAD)) {
         NAD = acceptedNAD;
     }
     return payload;
 }
 
-void LinTransportLayer::readSingleFrame(PDU::SingleFrame &singleFrame, std::vector<uint8_t> &payload)
+bool LinTransportLayer::readSingleFrame(PDU &frame, std::vector<uint8_t> &payload)
 {
-    size_t announcedBytes = singleFrame.getLen();
-    // STRICT: when announcedBytes is greater than 6 bytes, frame shall be ignored
-    // however, single frame is limited to 6 data bytes...
+    size_t announcedBytes = frame.singleFrame.getLen();
+    if (announcedBytes > PDU::dataLenSingle) {
+        // STRICT: when announcedBytes is greater than 6 bytes, frame shall be ignored
+        return false;
+    }
 
-    payload.insert(
-        payload.end(),
-        singleFrame.data,
-        singleFrame.data + announcedBytes
-    );
+    payload = frame.singleFrame.getData();
+    return true;
 }
 
-bool LinTransportLayer::readFirstFrame(PDU::FirstFrame &firstFrame, std::vector<uint8_t> &payload, size_t &announcedBytes)
+bool LinTransportLayer::readFirstFrame(PDU &frame, std::vector<uint8_t> &payload, size_t &announcedBytes)
 {
-    announcedBytes = firstFrame.getLen();
-    if (announcedBytes < 7) {
+    announcedBytes = frame.firstFrame.getLen();
+    if (announcedBytes <= PDU::dataLenSingle) {
         // STRICT: when announcedBytes is less than 7 bytes, frame shall be ignored
         return false;
     }
 
-    // STRICT: reception of segmented message shall not start, wenn buffer payload is to small.
     payload.reserve(announcedBytes);
-    payload.insert(
-        payload.end(),
-        firstFrame.data,
-        firstFrame.data + sizeof(PDU::FirstFrame::data)
-    );
-    // since FF_DataLen is smaller than SF_DataLen, FF will never include FillBytes
+    if (payload.capacity() != announcedBytes) {
+        // STRICT: reception of segmented message shall not start, wenn buffer payload is to small.
+        return {};
+    }
 
+    auto data = frame.firstFrame.getData();
+    payload.insert(payload.end(), data.begin(), data.end());
     return true;
 }
 
-bool LinTransportLayer::readConsecutiveFrame(PDU::ConsecutiveFrame &consecutiveFrame, std::vector<uint8_t> &payload, const size_t &announcedBytes, int frameCounter)
+bool LinTransportLayer::readConsecutiveFrame(PDU &frame, std::vector<uint8_t> &payload, const size_t &announcedBytes, int frameCounter)
 {
-    auto expectedSequenceNumber = frameCounter & PDU::MASK_PCI_SN;
-    auto rxSequenceNumber = consecutiveFrame.getSequenceNumber();
-    if (expectedSequenceNumber != rxSequenceNumber) {
-        // STRICT: unexpected sequence number received --> abort
+    if (frame.consecutiveFrame.verifySequenceNumber(frameCounter)) {
         return false;
     }
     auto bytesToReceive = announcedBytes - payload.size();
-    auto bytesInFrame = std::min(bytesToReceive, sizeof(PDU::ConsecutiveFrame::data));
-    payload.insert(
-        payload.end(),
-        consecutiveFrame.data,
-        consecutiveFrame.data + bytesInFrame
-    );
-    // fillbytes are not verified (0xFF) and ignored
+    auto data = frame.consecutiveFrame.getData(bytesToReceive);
+    payload.insert(payload.end(), data.begin(), data.end());
 
     return true;
 }

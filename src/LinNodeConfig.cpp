@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "LinFrameTransfer.hpp"
+#include "LinPDU.hpp"
 
 /// @brief send wakeup command by sending a bus dominant for 1.6ms (at 9600 Baud)
 void LinNodeConfig::requestWakeup()
@@ -52,15 +53,9 @@ void LinNodeConfig::requestGoToSleep()
     // https://www.lin-cia.org/fileadmin/microsites/lin-cia.org/resources/documents/LIN_2.2A.pdf
     // 2.6.3 Go To Sleep
     // Request from master to all nodes to go to sleep
-   
-    LinTransportLayer::PDU::SingleFrame CmdSleep = {
-        .NAD = PDU::NAD::SLEEP,
-        .PCI_LEN = PDU::PCI::Sleep_Type, // according to spec: use "invalid" PCI and LEN
-        .data = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
-    };
-    uint8_t* ptr = reinterpret_cast<uint8_t*>(&CmdSleep);
-    std::vector<uint8_t> frameData(ptr, ptr + sizeof(CmdSleep));
-    writeFrame(FRAME_ID::MASTER_REQUEST, frameData);
+
+    PDU cmdSleep = PDU::getSleepCmd();
+    writeFrame(FRAME_ID::MASTER_REQUEST, cmdSleep.asVector());
 }
 
 std::optional<std::vector<uint8_t>> LinNodeConfig::readById(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint8_t id) {
