@@ -220,12 +220,9 @@ public:
 
     PDU() {}
 
-    PDU(uint8_t NAD, uint8_t PCI, std::array<uint8_t, dataLenSingle> otherBytes)
-    {
-        common.NAD = NAD;
-        common.PCI = PCI;
-        common.framedata = otherBytes;
-    }
+    PDU(uint8_t NAD, uint8_t PCI, std::array<uint8_t, dataLenSingle> otherBytes):
+        common{NAD, PCI, otherBytes}
+    {}
 
     ~PDU() = default;
 
