@@ -1,9 +1,9 @@
 // LinPDU.hpp
 //
 // Provides a class PDU
-// - supporting SingleFrame, FirstFrame and ConsecutiveFrame communication for TransportLayer
-// - Sleep Request Command uses a specific byte configuration byside the three frame types 
-// 
+// - supporting SingleFrame, FirstFrame, and ConsecutiveFrame communication for the TransportLayer
+// - Sleep Request Command uses a specific byte configuration besides the three frame types
+//
 // LIN Specification 2.2A
 // Source https://www.lin-cia.org/fileadmin/microsites/lin-cia.org/resources/documents/LIN_2.2A.pdf
 
@@ -20,7 +20,7 @@ public:
     enum NAD_type : uint8_t {
     // 0     (0x00) = Reserved for go to sleep command, see Section 2.6.3
         SLEEP = 0x00,
-    // 1-125 (0x01-0x7D) = Slave Node Adress (NAD)
+    // 1-125 (0x01-0x7D) = Slave Node Address (NAD)
     // 126   (0x7E) = Functional node address (functional NAD), only used for diagnostics (using the transport layer)
         FUNCTIONAL = 0x7E,
     // 127   (0x7F) = Slave node address broadcast (broadcast NAD)
@@ -32,7 +32,7 @@ public:
     // 4.2.3.3 PCI = Protocol Control Information (= Length of Message)
     static constexpr uint8_t MASK_PCI_TYPE = 0xF0;
     static constexpr uint8_t MASK_PCI_LEN = 0x0F; // SF and FF
-    static constexpr uint8_t MASK_PCI_SN = 0x0F; // CF
+    static constexpr uint8_t MASK_PCI_SN = 0x0F;  // CF
 
     enum class PCI_Type : uint8_t {
         SINGLE = 0x00,
@@ -41,17 +41,17 @@ public:
     };
 
     static constexpr size_t dataLenSingle = 6;
-    static constexpr size_t dataLenFirst = dataLenSingle-1;
+    static constexpr size_t dataLenFirst = dataLenSingle - 1;
     static constexpr size_t dataLenConsecutive = dataLenSingle;
     static constexpr uint8_t fillByte = 0xFF;
 
     struct Common {
         NAD_type NAD;
-        uint8_t PCI; // PCI data in high nibble
+        uint8_t PCI; // PCI data in the high nibble
         std::array<uint8_t, dataLenSingle> framedata;
     };
 
-    // Single Frame, payload fits into the single PDU
+    // Single Frame: Payload fits into a single PDU
     class SingleFrame {
     private:
         NAD_type NAD;
@@ -59,32 +59,32 @@ public:
                          // B3..B0 = LEN of data bytes
         std::array<uint8_t, dataLenSingle> DATA;
 
-        /// @brief encodes PCI and LEN, does not adjust DATA
-        /// @param len of payload encoded within frame
+        /// @brief Encodes PCI and LEN, does not adjust DATA
+        /// @param len Payload length encoded within the frame
         inline void setLen(std::size_t len)
         {
             PCI_LEN = static_cast<uint8_t>(PCI_Type::SINGLE) | static_cast<uint8_t>(len & MASK_PCI_LEN);
         }
 
     public:
-        /// @brief returns count of bytes encoded within frame
-        /// @return len of data
+        /// @brief Returns the count of bytes encoded within the frame
+        /// @return Length of data
         inline std::size_t getLen() const
         {
             return PCI_LEN & PDU::MASK_PCI_LEN;
         }
 
-        /// @brief retuns payload of frame
-        /// @return data vector (0..6 bytes)
+        /// @brief Returns the payload of the frame
+        /// @return Data vector (0..6 bytes)
         inline std::vector<uint8_t> getData() const
         {
             size_t l = getLen();
-            return {DATA.begin(), DATA.begin() + l};
+            return { DATA.begin(), DATA.begin() + l };
         }
 
-        /// @brief copy data into single PDU, encode correct value to LEN
-        /// @param new_data source vector, must not exceed 6 bytes
-        /// @return count of encoded bytes
+        /// @brief Copies data into a single PDU, encodes the correct value to LEN
+        /// @param new_data Source vector, must not exceed 6 bytes
+        /// @return Count of encoded bytes
         size_t setDataAndLen(const std::vector<uint8_t>& payload)
         {
             int len = std::min(DATA.size(), payload.size());
@@ -101,53 +101,53 @@ public:
         }
     };
 
-    // First Frame, when payload does not fit into a single PDU, musst be followed by Consecutive Frames
+    // First Frame: When payload does not fit into a single PDU, must be followed by Consecutive Frames
     class FirstFrame {
     protected:
         NAD_type NAD;
         uint8_t PCI_LEN_MSB; // B7..B4 = type (SF=0, FF=1, CF=2)
-                             // B3..B0 = LEN/256 of databytes
+                             // B3..B0 = LEN/256 of data bytes
         uint8_t LEN_LSB;
         std::array<uint8_t, dataLenFirst> DATA;
 
     public:
-        /// @brief encode length of complete payload for announcement
-        /// @param len of whole payload - only first 5 bytes are encoded in first frame
+        /// @brief Encodes the length of the complete payload for announcement
+        /// @param len Length of the whole payload - only the first 5 bytes are encoded in the first frame
         inline void setLen(const std::size_t len)
         {
             PCI_LEN_MSB = static_cast<uint8_t>(PCI_Type::FIRST) | static_cast<uint8_t>(len >> 8);
             LEN_LSB = static_cast<uint8_t>(len & 0xFF);
         }
 
-        /// @brief decodes length of announced payload (will exceed data of first frame)
-        /// @return len of whole payload - only first 5 bytes are encoded in first frame
+        /// @brief Decodes the length of the announced payload (will exceed data of the first frame)
+        /// @return Length of the whole payload - only the first 5 bytes are encoded in the first frame
         inline std::size_t getLen() const
         {
             return (PCI_LEN_MSB & MASK_PCI_LEN) << 8 | LEN_LSB;
         }
 
-        /// @brief copy data into first PDU, does not encode LEN
-        /// @param new_data source vector, must exceed 6 bytes
-        /// @return count of encoded bytes
+        /// @brief Copies data into the first PDU, does not encode LEN
+        /// @param new_data Source vector, must exceed 6 bytes
+        /// @return Count of encoded bytes
         inline size_t setData(const std::vector<uint8_t>& new_data)
         {
-            // according to spec: every valid FirstFrame does have
-            // - full use of DATA byes: len = 5
+            // According to spec: every valid FirstFrame does have
+            // - full use of DATA bytes: len = 5
             // - no need for fill bytes
             // --> no verification of sizeof(new_data)
             std::copy_n(new_data.begin(), DATA.size(), DATA.begin());
             return DATA.size();
         }
 
-        /// @brief returns the part of the payload that is coded in the first frame
-        /// @return vector (5 bytes)
+        /// @brief Returns the part of the payload that is coded in the first frame
+        /// @return Vector (5 bytes)
         inline std::vector<uint8_t> getData() const
         {
-            return {DATA.begin(), DATA.end()};
+            return { DATA.begin(), DATA.end() };
         }
     };
 
-    // Consecutive Frames follows on FF, when payload does not fit into a single PDU
+    // Consecutive Frame: Follows on FF when payload does not fit into a single PDU
     class ConsecutiveFrame {
     protected:
         NAD_type NAD;
@@ -156,33 +156,33 @@ public:
         std::array<uint8_t, dataLenConsecutive> DATA;
 
     public:
-        /// @brief encodes the sequence number of this frame
-        /// @param sequenceNumber 
+        /// @brief Encodes the sequence number of this frame
+        /// @param sequenceNumber
         inline void setSequenceNumber(const uint8_t sequenceNumber)
         {
             PCI_SN = static_cast<uint8_t>(PCI_Type::CONSECUTIVE) | (sequenceNumber & MASK_PCI_SN);
         }
 
-        /// @brief returns the part of the sequence number encoded within the frame
-        /// @return secuenceNumber - consider: limited to lower 4 bits, will wrap around
+        /// @brief Returns the part of the sequence number encoded within the frame
+        /// @return Sequence number - consider: limited to lower 4 bits, will wrap around
         inline int getSequenceNumber() const
         {
             return PCI_SN & PDU::MASK_PCI_SN;
         }
 
-        /// @brief check if sequence number of current frame matches the expected value
+        /// @brief Checks if the sequence number of the current frame matches the expected value
         /// @param expectedSequenceNumber to be verified
-        /// @return bool: expectation fulfilled
+        /// @return bool: Expectation fulfilled
         inline bool verifySequenceNumber(int expectedSequenceNumber)
         {
             auto SN = expectedSequenceNumber & PDU::MASK_PCI_SN;
             return (getSequenceNumber() == SN);
         }
 
-        /// @brief encodes (up to 6 bytes of) the payload within a consecutive frame
-        /// @param payload source, may exceed capacity of frame
-        /// @param offset first n bytes will be skipped
-        /// @return count of encoded bytes 
+        /// @brief Encodes (up to 6 bytes of) the payload within a consecutive frame
+        /// @param payload Source, may exceed capacity of the frame
+        /// @param offset First n bytes will be skipped
+        /// @return Count of encoded bytes 
         size_t setData(const std::vector<uint8_t>& payload, const int offset = 0)
         {
             int len = std::min(DATA.size(), payload.size() - offset);
@@ -197,13 +197,13 @@ public:
             return len;
         }
 
-        /// @brief returns the part of the payload that is coded in the consecutive frame
-        /// @param len of data (will be limited to max 6 bytes)
-        /// @return vector (len bytes)
+        /// @brief Returns the part of the payload that is coded in the consecutive frame
+        /// @param len Length of data (will be limited to max 6 bytes)
+        /// @return Vector (len bytes)
         inline std::vector<uint8_t> getData(size_t len) const
         {
             size_t l = std::min(DATA.size(), len);
-            return {DATA.begin(), DATA.begin() + l};
+            return { DATA.begin(), DATA.begin() + l };
         }
     };
 
@@ -226,35 +226,35 @@ public:
 
     PDU() {}
 
-    PDU(uint8_t NAD, uint8_t PCI, std::array<uint8_t, dataLenSingle> otherBytes):
-        common{static_cast<NAD_type>(NAD), PCI, otherBytes}
+    PDU(uint8_t NAD, uint8_t PCI, std::array<uint8_t, dataLenSingle> otherBytes) :
+        common{ static_cast<NAD_type>(NAD), PCI, otherBytes }
     {}
 
     ~PDU() = default;
 
-    /// @brief set Node Adress (NAD) of the PDU (operates on any Frametype)
-    /// @param nad Node Adress
+    /// @brief Sets the Node Address (NAD) of the PDU (operates on any frame type)
+    /// @param nad Node Address
     inline void setNAD(uint8_t NAD)
     {
         common.NAD = static_cast<NAD_type>(NAD);
     }
 
-    /// @brief decodes Node Adress of PDU (operates on any Frametype)
-    /// @return Node Adress od PDU
+    /// @brief Decodes the Node Address of the PDU (operates on any frame type)
+    /// @return Node Address of PDU
     inline uint8_t getNad() const
     {
         return static_cast<uint8_t>(common.NAD);
     }
 
-    /// @brief decode type of PDU - can only handel SingleFrame, FirstFrame, ConsecutiveFrame; NOT sleepCmd
-    /// @return type of PDU
+    /// @brief Decodes the type of PDU - can only handle SingleFrame, FirstFrame, ConsecutiveFrame; NOT sleepCmd
+    /// @return Type of PDU
     inline PCI_Type getType() const
     {
         return static_cast<PCI_Type>(common.PCI & PDU::MASK_PCI_TYPE);
     }
 
-    /// @brief conversion of PDU to vector of uint8_t
-    /// @return
+    /// @brief Conversion of PDU to a vector of uint8_t
+    /// @return Vector
     std::vector<uint8_t> asVector() const
     {
         const uint8_t* dataPtr = reinterpret_cast<const uint8_t*>(&common);
@@ -263,7 +263,7 @@ public:
 
     static PDU getSleepCmd()
     {
-        // Lin Spec: 2.6.3 Go To Sleep
+        // LIN Spec: 2.6.3 Go To Sleep
         // Request from master to all nodes to go to sleep
         PDU sleepCmd;
         sleepCmd.common.NAD = NAD_type::SLEEP;
