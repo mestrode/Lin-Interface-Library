@@ -263,6 +263,6 @@ public:
         sleepCmd.common.NAD = NAD::SLEEP;
         sleepCmd.common.PCI = fillByte;
         sleepCmd.common.framedata.fill(fillByte);
-        return std::move(sleepCmd);
+        return sleepCmd;
     }
 };
