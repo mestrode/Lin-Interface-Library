@@ -167,7 +167,7 @@ public:
         inline bool verifySequenceNumber(int expectedSequenceNumber)
         {
             auto SN = expectedSequenceNumber & PDU::MASK_PCI_SN;
-            return (getSequenceNumber() != SN);
+            return (getSequenceNumber() == SN);
         }
 
         /// @brief encodes (up to 6 bytes of) the payload within a consecutive frame

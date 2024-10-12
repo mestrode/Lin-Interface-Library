@@ -254,7 +254,7 @@ bool LinTransportLayer::readFirstFrame(PDU &frame, std::vector<uint8_t> &payload
 
 bool LinTransportLayer::readConsecutiveFrame(PDU &frame, std::vector<uint8_t> &payload, const size_t &announcedBytes, int frameCounter)
 {
-    if (frame.consecutiveFrame.verifySequenceNumber(frameCounter)) {
+    if (!frame.consecutiveFrame.verifySequenceNumber(frameCounter)) {
         return false;
     }
     auto bytesToReceive = announcedBytes - payload.size();
