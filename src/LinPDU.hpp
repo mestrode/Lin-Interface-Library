@@ -17,7 +17,7 @@
 union PDU {
 public:
     // 4.2.3.2 NAD = Node Address
-    enum NAD_type : uint8_t {
+    enum NAD_Type : uint8_t {
     // 0     (0x00) = Reserved for go to sleep command, see Section 2.6.3
         SLEEP = 0x00,
     // 1-125 (0x01-0x7D) = Slave Node Address (NAD)
@@ -46,7 +46,7 @@ public:
     static constexpr uint8_t fillByte = 0xFF;
 
     struct Common {
-        NAD_type NAD;
+        NAD_Type NAD;
         uint8_t PCI; // PCI data in the high nibble
         std::array<uint8_t, dataLenSingle> framedata;
     };
@@ -54,7 +54,7 @@ public:
     // Single Frame: Payload fits into a single PDU
     class SingleFrame {
     private:
-        NAD_type NAD;
+        NAD_Type NAD;
         uint8_t PCI_LEN; // B7..B4 = type (SF=0, FF=1, CF=2)
                          // B3..B0 = LEN of data bytes
         std::array<uint8_t, dataLenSingle> DATA;
@@ -104,7 +104,7 @@ public:
     // First Frame: When payload does not fit into a single PDU, must be followed by Consecutive Frames
     class FirstFrame {
     protected:
-        NAD_type NAD;
+        NAD_Type NAD;
         uint8_t PCI_LEN_MSB; // B7..B4 = type (SF=0, FF=1, CF=2)
                              // B3..B0 = LEN/256 of data bytes
         uint8_t LEN_LSB;
@@ -150,7 +150,7 @@ public:
     // Consecutive Frame: Follows on FF when payload does not fit into a single PDU
     class ConsecutiveFrame {
     protected:
-        NAD_type NAD;
+        NAD_Type NAD;
         uint8_t PCI_SN; // B7..B4 = type (SF=0, FF=1, CF=2)
                         // B3..B0 = Sequence Number % 0x0F (wraps around)
         std::array<uint8_t, dataLenConsecutive> DATA;
@@ -227,7 +227,7 @@ public:
     PDU() {}
 
     PDU(uint8_t NAD, uint8_t PCI, std::array<uint8_t, dataLenSingle> otherBytes) :
-        common{ static_cast<NAD_type>(NAD), PCI, otherBytes }
+        common{ static_cast<NAD_Type>(NAD), PCI, otherBytes }
     {}
 
     ~PDU() = default;
@@ -236,12 +236,12 @@ public:
     /// @param nad Node Address
     inline void setNAD(uint8_t NAD)
     {
-        common.NAD = static_cast<NAD_type>(NAD);
+        common.NAD = static_cast<NAD_Type>(NAD);
     }
 
     /// @brief Decodes the Node Address of the PDU (operates on any frame type)
     /// @return Node Address of PDU
-    inline uint8_t getNad() const
+    inline uint8_t getNAD() const
     {
         return static_cast<uint8_t>(common.NAD);
     }
@@ -266,7 +266,7 @@ public:
         // LIN Spec: 2.6.3 Go To Sleep
         // Request from master to all nodes to go to sleep
         PDU sleepCmd;
-        sleepCmd.common.NAD = NAD_type::SLEEP;
+        sleepCmd.common.NAD = NAD_Type::SLEEP;
         sleepCmd.common.PCI = fillByte;
         sleepCmd.common.framedata.fill(fillByte);
         return sleepCmd;

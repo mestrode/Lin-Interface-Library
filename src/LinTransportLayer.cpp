@@ -146,14 +146,14 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t &
         if (0 == frameCounter)
         {
             /// NAD will be replaced...
-            if ((PDU::NAD_type::BROADCAST == acceptedNAD) || // on Wildcard
-                (frame.getNad() == newNAD))             // on NAD Change my config requect
+            if ((PDU::NAD_Type::BROADCAST == acceptedNAD) || // on Wildcard
+                (frame.getNAD() == newNAD))             // on NAD Change my config requect
             {
                 // Boradcast or Cmd "Conditional Change of NAD" was successfull
-                acceptedNAD = frame.getNad();
+                acceptedNAD = frame.getNAD();
             }
 
-            if (acceptedNAD != frame.getNad())
+            if (acceptedNAD != frame.getNAD())
             {
                 // unexpected NAD: ignore Frame
                 continue;
@@ -185,7 +185,7 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t &
         } else {
             // frameCounter == isConsecutiveFrame
             // sequence of CF started -> error handling now changed
-            if (acceptedNAD != frame.getNad()) {
+            if (acceptedNAD != frame.getNAD()) {
                 // STRICT: mismatch with received NAT of FirstFrame --> abort
                 return {};
             }
@@ -215,7 +215,7 @@ std::optional<std::vector<uint8_t>> LinTransportLayer::readPduResponse(uint8_t &
 
     // success
     // may return new NAT
-    if ((PDU::NAD_type::BROADCAST == NAD) || (0 != newNAD)) {
+    if ((PDU::NAD_Type::BROADCAST == NAD) || (0 != newNAD)) {
         NAD = acceptedNAD;
     }
     return payload;
