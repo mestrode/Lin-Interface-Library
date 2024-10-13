@@ -117,7 +117,7 @@ void test_lin_getID() {
 
     TEST_ASSERT_EQUAL(response_NAD, NAD);
     TEST_ASSERT_EQUAL(response_supplierId, supplierId);
-    TEST_ASSERT_EQUAL(response_functionId, request_FunctionId);
+    TEST_ASSERT_EQUAL(response_functionId, functionId);
     TEST_ASSERT_EQUAL(response_variant, variant);
 
     TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
@@ -246,8 +246,8 @@ void test_lin_saveConfig_ok()
         request_NAD, // NAD
         0x01, // 1 Byte
         0xB6, // SID = Save Config
-        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // unused
-        0xC8, // chksum
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // fill bytes
+        0xE1, // chksum
 
         0x00, 0x55, 0x7d,
     };
@@ -303,8 +303,8 @@ void test_lin_AssignFrameIdRange_ok()
         request_PID0,
         request_PID1,
         request_PID2, 
-        request_PID3, // unused
-        0x3D, // chksum
+        request_PID3,
+        0x56, // chksum
 
         0x00, 0x55, 0x7d,
     };
