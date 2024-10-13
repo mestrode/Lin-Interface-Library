@@ -77,12 +77,12 @@ public:
         rxData.clear();
     }
 
-    bool hasHead()
+    inline bool hasHead()
     {
         return state >= State::WaitForData;
     }
 
-    bool isFinish()
+    inline bool isFinish()
     {
         return state == State::FrameComplete;
     }
