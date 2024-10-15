@@ -124,6 +124,7 @@ void test_lin_getID() {
     TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
+/// @brief Node Configuration Service: Assign NAD (Spec LIN 2.2A, Page 74, Chap. 4.2.5.1)
 void test_lin_assignNAD_ok()
 {
     std::cout << "\n\n\nRunning test: " << __FUNCTION__ << std::endl;
@@ -135,49 +136,40 @@ void test_lin_assignNAD_ok()
 
     std::vector<uint8_t> bus_transmitted = {
     // Master
-        0x00, 0x55, 0x3c,
+        0x00, 0x55, 0x3C, // Frame Head: Master Request
         request_NAD, // NAD Wildcard
-        0x06, // 6 Byte
-        0xB0, // SID = assign NAD
+        0x06, // PCI: 6 Byte
+        0xB0, // SID: Assign NAD
         lowerByte(request_SupplierId), upperByte(request_SupplierId), // Supplier ID LSB, MSB
         lowerByte(request_FunctionId), upperByte(request_FunctionId), // Function ID LSB, MSB
-        request_NAD_new,
-        0x00, // chksum
-
-        0x00, 0x55, 0x7d
+        request_NAD_new, // New NAD
+        0x00, // Frame Checksum
+    // Slave
+        0x00, 0x55, 0x7D // Frame Head: Slave Response
     };
 
     // Slave Response
-    constexpr uint8_t response_NAD_old = 0x0A;
-    struct Response {
-        std::vector<uint8_t> head {
-            response_NAD_old, // <-- according to spec initial NAD will be used
-            0x01  // Single Frame, 1 Bytes
-        };
-        std::vector<uint8_t> payload {
-            0xF0 // RSID
-        };
-        std::vector<uint8_t> payload_fillbytes {
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF // unused
-        };
-        uint8_t checksum {
-            0x04 // Frame Checksum
-        };
-    } response;
-    linDriver->mock_Input(response.head);
-    linDriver->mock_Input(response.payload);
-    linDriver->mock_Input(response.payload_fillbytes);
-    linDriver->mock_Input(response.checksum);
+    std::vector<uint8_t> response {
+        request_NAD, // initial NAD <-- according to spec initial NAD will be used
+        0x01,  // PCI: Single Frame, 1 Bytes
+        0xF0, // RSID
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 5x unused
+        0x8E // Frame Checksum
+    };
+    linDriver->mock_Input(response);
 
     uint8_t NAD = request_NAD;
     bool result = linNodeConfig->assignNAD(NAD, request_SupplierId, request_FunctionId, request_NAD_new);
 
-    TEST_ASSERT_EQUAL(response_NAD_old, NAD);  // <-- answer will follow on old NAD
+    TEST_ASSERT_TRUE(result);
+
+    TEST_ASSERT_EQUAL(request_NAD, NAD);  // <-- answer will follow on old NAD
 
     TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
     TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
+/// @brief Node Configuration Service: Conditional change NAD (Spec LIN 2.2A, Page 75, Chap. 4.2.5.2)
 void test_lin_conditionalChangeNAD_ok()
 {
     std::cout << "\n\n\nRunning test: " << __FUNCTION__ << std::endl;
@@ -190,43 +182,35 @@ void test_lin_conditionalChangeNAD_ok()
     constexpr uint8_t request_NAD_new = 0x1B;
 
     std::vector<uint8_t> bus_transmitted = {
-        0x00, 0x55, 0x3c,
+    // Master
+        0x00, 0x55, 0x3C, // Frame Head: Master Request
         request_NAD, // NAD (=master request)
-        0x06, // 6 Byte
-        0xB3, // SID = Conditional change NAD
+        0x06, // PCI: Single Frame, 6 Byte
+        0xB3, // SID: Conditional change NAD
         request_id, // Id
         request_byte, // Byte
         request_mask, // Mask
         request_invert, // Invert
         request_NAD_new, // new NAD
-        0x0C, // chksum
-
-        0x00, 0x55, 0x7d
+        0x0C, // Frame Checksum
+    //Slave
+        0x00, 0x55, 0x7D // Frame Head: Slave Response
     };
 
     // Slave Response
-    struct Response {
-        std::vector<uint8_t> head {
-            request_NAD_new, // NAD <-- according to spec: new NAD will be used
-            0x01  // Single Frame, 1 Bytes
-        };
-        std::vector<uint8_t> payload {
-            0xF3 // RSID
-        };
-        std::vector<uint8_t> payload_fillbytes {
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF // unused
-        };
-        uint8_t checksum {
-            0xEF // Frame Checksum
-        };
-    } response;
-    linDriver->mock_Input(response.head);
-    linDriver->mock_Input(response.payload);
-    linDriver->mock_Input(response.payload_fillbytes);
-    linDriver->mock_Input(response.checksum);
+    std::vector<uint8_t> response {
+        request_NAD_new, // NAD <-- according to spec: new NAD will be used
+        0x01,  // PCI: Single Frame, 1 Bytes
+        0xF3, // RSID
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 5x unused
+        0xEF // Frame Checksum
+    };
+    linDriver->mock_Input(response);
 
     uint8_t NAD = request_NAD;
     bool result = linNodeConfig->conditionalChangeNAD(NAD, request_id, request_byte, request_invert, request_mask, request_NAD_new);
+
+    TEST_ASSERT_TRUE(result);
 
     TEST_ASSERT_EQUAL(request_NAD_new, NAD);  // <-- answer will follow on new NAD
 
@@ -234,6 +218,7 @@ void test_lin_conditionalChangeNAD_ok()
     TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
+/// @brief Node Configuration Service: Save Configuration (Spec LIN 2.2A, Page 76, Chap. 4.2.5.4)
 void test_lin_saveConfig_ok()
 {
     std::cout << "\n\n\nRunning test: " << __FUNCTION__ << std::endl;
@@ -242,39 +227,30 @@ void test_lin_saveConfig_ok()
 
     std::vector<uint8_t> bus_transmitted = {
     // Master
-        0x00, 0x55, 0x3c,
+        0x00, 0x55, 0x3C, // Frame Head: Master Request
         request_NAD, // NAD
-        0x01, // 1 Byte
-        0xB6, // SID = Save Config
-        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // fill bytes
-        0xE1, // chksum
-
-        0x00, 0x55, 0x7d,
+        0x01, // PCI: Single Frame, 1 Byte
+        0xB6, // SID: Save Config
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 5x unused
+        0xE1, // Frame Checksum
+    //Slave
+        0x00, 0x55, 0x7D, // Frame Head: Slave Response
     };
 
     // Slave Response
-    struct Response {
-        std::vector<uint8_t> head {
-            request_NAD, // NAD
-            0x01  // Single Frame, 1 Bytes
-        };
-        std::vector<uint8_t> payload {
-            0xF6 // RSID = Save Config
-        };
-        std::vector<uint8_t> payload_fillbytes {
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF // unused
-        };
-        uint8_t checksum {
-            0xA1 // Frame Checksum
-        };
-    } response;
-    linDriver->mock_Input(response.head);
-    linDriver->mock_Input(response.payload);
-    linDriver->mock_Input(response.payload_fillbytes);
-    linDriver->mock_Input(response.checksum);
+    std::vector<uint8_t> response {
+        request_NAD, // NAD
+        0x01,  // Single Frame, 1 Bytes
+        0xF6, // RSID = Save Config
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 5x unused
+        0xA1 // Frame Checksum
+    };
+    linDriver->mock_Input(response);
 
     uint8_t NAD = request_NAD;
     bool result = linNodeConfig->saveConfig(NAD);
+
+    TEST_ASSERT_TRUE(result);
 
     TEST_ASSERT_EQUAL(request_NAD, NAD);  // <-- answer will follow on old NAD
 
@@ -282,6 +258,7 @@ void test_lin_saveConfig_ok()
     TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
+/// @brief Node Configuration Service: Assign frame ID range (Spec LIN 2.2A, Page 77, Chap. 4.2.5.5)
 void test_lin_AssignFrameIdRange_ok()
 {
     std::cout << "\n\n\nRunning test: " << __FUNCTION__ << std::endl;
@@ -295,43 +272,34 @@ void test_lin_AssignFrameIdRange_ok()
 
     std::vector<uint8_t> bus_transmitted = {
     // Master
-        0x00, 0x55, 0x3c,
+        0x00, 0x55, 0x3C, // Frame Head: Master Request
         request_NAD, // NAD
-        0x06, // 6 Byte
-        0xB7, // SID = Assign FrameId Range
+        0x06, // PCI: Single Frame, 6 Byte
+        0xB7, // SID: Assign frame ID Range
         request_start, // start
-        request_PID0,
-        request_PID1,
-        request_PID2, 
-        request_PID3,
+        request_PID0, // PID(index)
+        request_PID1, // PID(index+1)
+        request_PID2, // PID(index+2)
+        request_PID3, // PID(index+2)
         0x56, // chksum
-
-        0x00, 0x55, 0x7d,
+    // Slave
+        0x00, 0x55, 0x7D   // Frame Head: Slave Request
     };
 
     // Slave Response
-    struct Response {
-        std::vector<uint8_t> head {
-            request_NAD, // NAD
-            0x01  // Single Frame, 1 Bytes
-        };
-        std::vector<uint8_t> payload {
-            0xF7 // RSID = Assign Frame ID Range
-        };
-        std::vector<uint8_t> payload_fillbytes {
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF // unused
-        };
-        uint8_t checksum {
-            0xA0 // Frame Checksum
-        };
-    } response;
-    linDriver->mock_Input(response.head);
-    linDriver->mock_Input(response.payload);
-    linDriver->mock_Input(response.payload_fillbytes);
-    linDriver->mock_Input(response.checksum);
+    std::vector<uint8_t> response {
+        request_NAD, // NAD
+        0x01,  // PID: Single Frame, 1 Bytes
+        0xF7, // RSID: Assign Frame ID Range
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 5x unused
+        0xA0 // Frame Checksum
+    };
+    linDriver->mock_Input(response);
 
     uint8_t NAD = request_NAD;
     bool result = linNodeConfig->assignFrameIdRange(NAD, request_start, request_PID0, request_PID1, request_PID2, request_PID3);
+
+    TEST_ASSERT_TRUE(result);
 
     TEST_ASSERT_EQUAL(request_NAD, NAD);  // <-- answer will follow on old NAD
 
