@@ -29,13 +29,13 @@ public:
 
     std::optional<std::vector<uint8_t>> readById(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint8_t id);
     bool readProductId(uint8_t &NAD, uint16_t &supplierId, uint16_t &functionId, uint8_t &variantId);
-    bool readSerialNumber(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint32_t &serialNumber);
+    std::optional<uint32_t> readSerialNumber(uint8_t &NAD, uint16_t supplierId, uint16_t functionId);
 
     bool assignNAD(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint8_t newNAD);
     bool conditionalChangeNAD(uint8_t &NAD, uint8_t id, uint8_t byte, uint8_t invert, uint8_t mask, uint8_t newNAD);
 
     // not implemented:
-    // std::vector<uint8_t> LinNodeConfig::dataDump(uint8_t* NAD, std::vector<uint8_t>)
+    // std::optional<std::vector<uint8_t>> LinNodeConfig::dataDump(uint8_t* NAD, std::vector<uint8_t>)
 
     bool saveConfig(uint8_t &NAD);
     

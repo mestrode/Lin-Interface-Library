@@ -64,6 +64,7 @@ void test_lin_sleep() {
     TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
 }
 
+/// @brief Node Identification: Read by identifier (Spec LIN 2.2A, Page 78, Chap. 4.2.6.1)
 void test_lin_getID() {
     std::cout << "\n\n\nRunning test: " << __FUNCTION__ << std::endl;
 
@@ -72,15 +73,16 @@ void test_lin_getID() {
     constexpr uint16_t request_FunctionId = 0x3FFF; // Wildcard
 
     std::vector<uint8_t> bus_transmitted = {
-        0x00, 0x55, 0x3C, // Master Request
+    // Master
+        0x00, 0x55, 0x3C, // Frame: Master Request
         request_NAD, // NAD
-        0x06, // 6 Byte
-        0xB2, // SID
-        0x00, // Cmd Identifier
+        0x06, // PCI: Single frame, 6 Byte
+        0xB2, // SID: Read by ID
+        0x00, // Identifier: Lin Product Identification
         lowerByte(request_SupplierId), upperByte(request_SupplierId), // Supplier ID LSB, MSB
         lowerByte(request_FunctionId), upperByte(request_FunctionId), // Function ID LSB, MSB
-        0x09, // chksum
-
+        0x09, // Frame: Checksum
+    // Slave
         0x00, 0x55, 0x7d // Request for Slave Response
     };
 
@@ -89,25 +91,16 @@ void test_lin_getID() {
     constexpr uint16_t response_supplierId = 0x2E06;
     constexpr uint16_t response_functionId = 0x1080;
     constexpr uint8_t response_variant = 0x56;
-    struct Response {
-        std::vector<uint8_t> head {
-            response_NAD, // NAD
-            0x06  // Single Frame, 6 Bytes
-        };
-        std::vector<uint8_t> payload {
-            0xF2, // RSID
-            lowerByte(response_supplierId), upperByte(response_supplierId), // supplier ID, LSB MSB
-            lowerByte(response_functionId), upperByte(response_functionId), // function ID, LSB MSB
-            response_variant // variant
-        };
-        uint8_t checksum {
-            0xe1 // Frame Checksum
-        };
-    } response;
-    linDriver->mock_Input(response.head);
-    linDriver->mock_Input(response.payload);
-    // no fillbytes required
-    linDriver->mock_Input(response.checksum);
+    std::vector<uint8_t> response {
+        response_NAD, // NAD
+        0x06, // PCI: Single Frame, 6 Bytes
+        0xF2, // RSID
+        lowerByte(response_supplierId), upperByte(response_supplierId), // supplier ID, LSB MSB
+        lowerByte(response_functionId), upperByte(response_functionId), // function ID, LSB MSB
+        response_variant, // variant
+        0xE1 // Frame Checksum
+    };
+    linDriver->mock_Input(response);
 
     uint8_t NAD = request_NAD;
     uint16_t supplierId = request_SupplierId;
@@ -115,10 +108,62 @@ void test_lin_getID() {
     uint8_t variant = 0;
     bool result = linNodeConfig->readProductId(NAD, supplierId, functionId, variant);
 
+    TEST_ASSERT_TRUE(result);
+
     TEST_ASSERT_EQUAL(response_NAD, NAD);
     TEST_ASSERT_EQUAL(response_supplierId, supplierId);
     TEST_ASSERT_EQUAL(response_functionId, functionId);
     TEST_ASSERT_EQUAL(response_variant, variant);
+
+    TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
+    TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
+}
+
+/// @brief Node Identification: Read by identifier (Spec LIN 2.2A, Page 78, Chap. 4.2.6.1)
+void test_lin_serialNumber()
+{
+    std::cout << "\n\n\nRunning test: " << __FUNCTION__ << std::endl;
+
+    constexpr uint8_t request_NAD = 0x7F; // wildcard
+    constexpr uint16_t request_SupplierId = 0x7FFF; // wildcard
+    constexpr uint16_t request_FunctionId = 0x3FFF; // wildcard
+
+    std::vector<uint8_t> bus_transmitted = {
+    // Master
+        0x00, 0x55, 0x3C, // Frame Head: Master Request
+        request_NAD, // NAD Wildcard
+        0x06, // PID: Single Frame, 6 Byte
+        0xB2, // SID: Read by identifier
+        0x00, // Identifier: Serial number
+        lowerByte(request_SupplierId), upperByte(request_SupplierId), // Supplier ID LSB, MSB
+        lowerByte(request_FunctionId), upperByte(request_FunctionId), // Function ID LSB, MSB
+        0x09, // Frame: Checksum
+
+        0x00, 0x55, 0x7D // Frame Head: Slave Response
+    };
+
+    // Slave Response
+    constexpr uint8_t response_NAD = 0x0A;
+    constexpr uint32_t response_SN = 0x76543210;
+    std::vector<uint8_t> response {
+        response_NAD, // <-- according to spec initial NAD will be used
+        0x05, // PCI: Single Frame, 5 Byte
+        0xF2, // RSID
+        0x10, 0x32, 0x54, 0x76, // Srial Number LSB...MSB
+        0xFF, // unused
+        0xF0 // Frame: Checksum
+    };
+    linDriver->mock_Input(response);
+    
+    uint8_t NAD = request_NAD;
+    uint16_t supplierId = request_SupplierId;
+    uint16_t functionId = request_FunctionId;
+    auto result = linNodeConfig->readSerialNumber(NAD, supplierId, functionId);
+
+    TEST_ASSERT_EQUAL(response_NAD, NAD);  // <-- answer will follow on old NAD
+
+    TEST_ASSERT_TRUE(result);
+    TEST_ASSERT_EQUAL_UINT32(response_SN, result.value());
 
     TEST_ASSERT_EQUAL(bus_transmitted.size(), linDriver->txBuffer.size());
     TEST_ASSERT_EQUAL_MEMORY(bus_transmitted.data(), linDriver->txBuffer.data(), bus_transmitted.size());
@@ -151,7 +196,7 @@ void test_lin_assignNAD_ok()
     // Slave Response
     std::vector<uint8_t> response {
         request_NAD, // initial NAD <-- according to spec initial NAD will be used
-        0x01,  // PCI: Single Frame, 1 Bytes
+        0x01,  // PCI: Single Frame, 1 Byte
         0xF0, // RSID
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 5x unused
         0x8E // Frame Checksum
@@ -200,7 +245,7 @@ void test_lin_conditionalChangeNAD_ok()
     // Slave Response
     std::vector<uint8_t> response {
         request_NAD_new, // NAD <-- according to spec: new NAD will be used
-        0x01,  // PCI: Single Frame, 1 Bytes
+        0x01,  // PCI: Single Frame, 1 Byte
         0xF3, // RSID
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 5x unused
         0xEF // Frame Checksum
@@ -240,7 +285,7 @@ void test_lin_saveConfig_ok()
     // Slave Response
     std::vector<uint8_t> response {
         request_NAD, // NAD
-        0x01,  // Single Frame, 1 Bytes
+        0x01,  // Single Frame, 1 Byte
         0xF6, // RSID = Save Config
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 5x unused
         0xA1 // Frame Checksum
@@ -289,7 +334,7 @@ void test_lin_AssignFrameIdRange_ok()
     // Slave Response
     std::vector<uint8_t> response {
         request_NAD, // NAD
-        0x01,  // PID: Single Frame, 1 Bytes
+        0x01,  // PID: Single Frame, 1 Byte
         0xF7, // RSID: Assign Frame ID Range
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 5x unused
         0xA0 // Frame Checksum
@@ -313,6 +358,7 @@ int main() {
     RUN_TEST(test_lin_wakeup);
     RUN_TEST(test_lin_sleep);
     RUN_TEST(test_lin_getID);
+    RUN_TEST(test_lin_serialNumber);
     RUN_TEST(test_lin_assignNAD_ok);
     RUN_TEST(test_lin_conditionalChangeNAD_ok);
     RUN_TEST(test_lin_saveConfig_ok);

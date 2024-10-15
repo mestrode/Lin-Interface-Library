@@ -133,12 +133,12 @@ bool LinNodeConfig::readProductId(uint8_t &NAD, uint16_t &supplierId, uint16_t &
 
 /// @brief get Serial Number from specific node (optinal Function of Node)
 /// @details see LIN Spec 2.2A 4.2.1 LIN PRODUCT IDENTIFICATION
-/// @param NAD 
-/// @param supplierId 
-/// @param functionId 
-/// @param serialNumber 
-/// @return 
-bool LinNodeConfig::readSerialNumber(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint32_t &serialNumber)
+/// @param NAD
+/// @param supplierId
+/// @param functionId
+/// @param serialNumber
+/// @return Serial number or fail
+std::optional<uint32_t> LinNodeConfig::readSerialNumber(uint8_t &NAD, uint16_t supplierId, uint16_t functionId)
 {
     uint8_t SID = static_cast<uint8_t>(ServiceIdentifier::READ_BY_ID);
     std::vector<uint8_t> payload = {
@@ -153,7 +153,7 @@ bool LinNodeConfig::readSerialNumber(uint8_t &NAD, uint16_t supplierId, uint16_t
 
     if (!checkPayload_isValid(SID, raw))
     {
-        return false;
+        return {};
     }
 
     struct responseSid0ProductId
@@ -172,9 +172,9 @@ bool LinNodeConfig::readSerialNumber(uint8_t &NAD, uint16_t supplierId, uint16_t
             return false;
     */
 
-    serialNumber = re.serialNumber_MSB << 24 | re.serialNumber_LSB3 << 16 | re.serialNumber_LSB2 << 8 | re.serialNumber_LSB;
-    
-    return true;
+    uint32_t serialNumber = re.serialNumber_MSB << 24 | re.serialNumber_LSB3 << 16 | re.serialNumber_LSB2 << 8 | re.serialNumber_LSB;
+
+    return serialNumber;
 }
 
 
