@@ -58,7 +58,8 @@ void LinNodeConfig::requestGoToSleep()
     writeFrame(FRAME_ID::MASTER_REQUEST, cmdSleep.asVector());
 }
 
-std::optional<std::vector<uint8_t>> LinNodeConfig::readById(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint8_t id) {
+std::optional<std::vector<uint8_t>> LinNodeConfig::readById(uint8_t &NAD, uint16_t supplierId, uint16_t functionId, uint8_t id)
+{
     uint8_t SID = static_cast<uint8_t>(ServiceIdentifier::READ_BY_ID);
     std::vector<uint8_t> payload = {
         SID,
@@ -92,7 +93,7 @@ std::optional<std::vector<uint8_t>> LinNodeConfig::readById(uint8_t &NAD, uint16
 /// @param supplierId Supplier ID (may wildcard)
 /// @param functionId Function ID (may wildcard)
 /// @param variantId Variant of identical nodes
-/// @return 
+/// @return success
 bool LinNodeConfig::readProductId(uint8_t &NAD, uint16_t &supplierId, uint16_t &functionId, uint8_t &variantId)
 {
     uint8_t SID = static_cast<uint8_t>(ServiceIdentifier::READ_BY_ID);
@@ -126,10 +127,9 @@ bool LinNodeConfig::readProductId(uint8_t &NAD, uint16_t &supplierId, uint16_t &
     supplierId = re.supplierId_MSB << 8 | re.supplierId_LSB;
     functionId = re.functionId_MSB << 8 | re.functionId_LSB;
     variantId = re.variantId;
-    
+
     return true;
 }
-
 
 /// @brief get Serial Number from specific node (optinal Function of Node)
 /// @details see LIN Spec 2.2A 4.2.1 LIN PRODUCT IDENTIFICATION
@@ -354,7 +354,6 @@ bool LinNodeConfig::checkPayload_isValid(const uint8_t SID, const std::optional<
     debugStream.print(" = ");
     debugStream.print(get_NegativeResponseCode_String(errorcode));
     debugStream.println();
-
 
     return false;
 }
