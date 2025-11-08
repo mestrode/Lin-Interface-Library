@@ -318,14 +318,16 @@ size_t LinFrameTransfer::writeBreak()
 
     driver.flush();
     // configure to half baudrate --> a t_bit will be doubled
-    driver.updateBaudRate(baud >> 1);
+    driver.end();
+    driver.begin(baud >> 1);
     // write 0x00, including Stop-Bit (=1),
     // qualifies when writing in slow motion like a Break in normal speed
     size_t result = driver.write(BREAK_FIELD);
     // ensure this was send
     driver.flush();
     // restore normal speed
-    driver.updateBaudRate(baud);
+    driver.end();
+    driver.begin(baud);
     return result;
 }
 

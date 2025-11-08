@@ -33,14 +33,16 @@ void LinNodeConfig::requestWakeup()
     // ensure the tx buffer is empty
     driver.flush();
     // configure to half baudrate --> a t_bit will be doubled
-    driver.updateBaudRate(baud >> 1);
+    driver.end();
+    driver.begin(baud >> 1);
     // write 0x00, including Stop-Bit (=1)
     // qualifies when writing in slow motion for a wake-up request
     driver.write(LinFrameTransfer::BREAK_FIELD);
     // ensure this is send
     driver.flush();
     // restore normal speed
-    driver.updateBaudRate(baud);
+    driver.end();
+    driver.begin(baud);
 
     // give the bus some time to wake up (100-150ms)
     constexpr auto delay_after_Wakeup = 100; // 100-150ms, after 250ms slaves may request a second call
